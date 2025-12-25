@@ -31,8 +31,8 @@ export default function Sidebar() {
           </div>
           <nav className="sidebar-nav">
             <div className="nav-item active" onClick={closeMenu}>
-              <span className="nav-icon">📉</span>
-              <span className="nav-text">Dashboard</span>
+              <span className="nav-icon">✅/span>
+              <span className="nav-text">Task Board</span>
             </div>
           </nav>
         </div>
