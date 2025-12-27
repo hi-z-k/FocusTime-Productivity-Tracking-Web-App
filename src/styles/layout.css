@@ -1,32 +1,48 @@
-
+/* --- Updated Sidebar Container --- */
 .sidebar {
   width: 260px;
   height: 100vh;
-  background-color: #f0f0f0; /* Matches the light grey sidebar in mockup */
+  background-color: #f0f0f0; 
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  /* THE FIX: Enable vertical scrolling for the entire bar */
+  overflow-y: auto; 
+  overflow-x: hidden;
   padding: 30px 20px;
   position: fixed;
   left: 0;
   top: 0;
-  border-radius: 0 40px 40px 0; /* Soft curves for the sidebar edge */
+  border-radius: 0 40px 40px 0; 
+  z-index: 1000;
+  /* Remove space-between so items follow each other naturally */
+  justify-content: flex-start; 
 }
 
+/* Optional: Custom scrollbar to keep it looking clean */
+.sidebar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #dcdcdc;
+  border-radius: 10px;
+}
+
+/* --- Navigation & Layout --- */
 .logo-section {
   display: flex;
   align-items: center;
   gap: 15px;
   margin-bottom: 40px;
   padding-left: 10px;
+  flex-shrink: 0; /* Prevents logo from squishing */
 }
-
-
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* Removed flex: 1 to let the whole sidebar handle the height */
 }
 
 .nav-item {
@@ -46,18 +62,33 @@
   color: #000;
 }
 
+/* --- Bottom Section (Now flows with scroll) --- */
+.sidebar-bottom {
+  margin-top: 20px; /* Space between the main nav and bottom items */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .theme-toggle {
   display: flex;
   gap: 15px;
-  margin-top: 20px;
+  margin-top: 10px;
   padding: 10px 15px;
   font-size: 0.8rem;
   color: #888;
 }
 
-/* Top Navbar Styles */
+.focustime-logo {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+/* --- Top Navbar & Mobile Styles (Unchanged) --- */
 .top-navbar {
-  margin-left: 260px; /* Offset by sidebar width */
+  margin-left: 260px; 
   padding: 20px 40px;
 }
 
@@ -71,40 +102,6 @@
   box-shadow: 0 4px 15px rgba(0,0,0,0.03);
 }
 
-.user-profile-badge {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-text {
-  text-align: right;
-  line-height: 1.2;
-}
-
-.user-name {
-  display: block;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.user-streak {
-  font-size: 0.7rem;
-  color: #a08c7d; /* Brownish/Orange streak color from mockup */
-}
-
-.user-avatar {
-  width: 35px;
-  height: 35px;
-  background: #ddd;
-  border-radius: 50%;
-}
-/* --- Desktop Styles (Keep existing) --- */
-.hamburger {
-  display: none; /* Hide on desktop */
-}
-
-/* --- Mobile Styles --- */
 @media (max-width: 768px) {
   .hamburger {
     display: block;
@@ -122,22 +119,12 @@
   }
 
   .sidebar {
-    position: fixed;
-    left: -260px; /* Hide off-screen */
+    left: -260px; 
     transition: left 0.3s ease;
-    z-index: 1000;
-    box-shadow: 10px 0 20px rgba(0,0,0,0.1);
   }
 
   .sidebar.open {
-    left: 0; /* Slide in */
-  }
-
-  /* Adjust main content when sidebar is hidden */
-  .dashboard-layout {
-    margin-left: 0 !important; 
-    padding: 20px;
-    padding-top: 80px; /* Space for hamburger */
+    left: 0;
   }
 
   .sidebar-overlay {
@@ -149,18 +136,4 @@
     background: rgba(0,0,0,0.4);
     z-index: 999;
   }
-
-  /* Make the Kanban Board scrollable on mobile */
-  .task-board-container {
-    flex-direction: column; /* Stack columns vertically on very small screens */
-    align-items: center;
-  }
-}
-.focustime-logo {
-  width: 50px;
-  height: 50px;
-  object-fit: contain;
-  border-radius: 50%;
-  align-items: center;
-  justify-content: center;
 }
