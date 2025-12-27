@@ -1,7 +1,7 @@
 import React from "react";
 import "../../styles/layout.css";
 
-const Navbar = ({ title = "To-Do" }) => {
+const Navbar = ({ title = "To-Do", streak }) => {
   return (
     <header className="top-navbar">
       <div className="navbar-content">
@@ -12,7 +12,7 @@ const Navbar = ({ title = "To-Do" }) => {
           <div className="user-profile-badge">
             <div className="user-text">
               <span className="user-name">User Name</span>
-              <span className="user-streak">Daily Streak</span>
+              <span className="user-streak">🔥 {streak} Days Streak</span>
             </div>
             <div className="user-avatar"></div>
           </div>
