@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import "../../styles/layout.css";
 import logo from "../../assets/logo.png";
+import { logOut } from "../../services/authService";
+
 
 export default function Sidebar({ onNavigate, currentView }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,6 +13,13 @@ export default function Sidebar({ onNavigate, currentView }) {
   const handleNav = (view) => {
     onNavigate(view);
     closeMenu();
+  };
+  const handleLogout = async () => {
+    try {
+      await logOut();
+    } catch (error) {
+      console.error("Failed to log out:", error.message);
+    }
   };
 
   return (
@@ -90,7 +99,7 @@ export default function Sidebar({ onNavigate, currentView }) {
               <span className="nav-text">Mentora</span>
             </div>
 
-            <div className="nav-item logout" onClick={() => handleNav("login")}>
+            <div className="nav-item logout" onClick={handleLogout}>
               <span className="nav-icon">🚪</span>
               <span className="nav-text">Logout</span>
             </div>

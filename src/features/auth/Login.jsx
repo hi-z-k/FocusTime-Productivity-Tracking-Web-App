@@ -1,16 +1,23 @@
 import React, { useState } from 'react';
 import '../../styles/forms.css';
 import '../../styles/buttons.css';
+import { logIn } from '../../services/authService';
 
 const Login = ({ onNavigate }) => { // Added onNavigate prop
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = (e) => {
+const [error, setError] = useState(null); 
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    console.log("Login with:", email, password);
-    // After logic, you could call onNavigate('profile') to log them in
-    if (onNavigate) onNavigate('profile'); 
+    setError(null); 
+
+    try {
+      await logIn(email, password)
+    } catch (err) {
+      setError(err.message); 
+    }
   };
 
   return (
