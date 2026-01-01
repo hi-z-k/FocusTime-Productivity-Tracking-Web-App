@@ -6,6 +6,7 @@ import "../../styles/global.css";
 import "../../styles/buttons.css";
 import "../../styles/forms.css";
 import "../../styles/pages.css";
+import "../../styles/taskboard.css";
 
 export default function TaskBoard() {
   const {
@@ -77,36 +78,22 @@ export default function TaskBoard() {
 
   return (
     <div className="dashboard-layout">
-      <main style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
+      <main className="taskboard-main">
         <section className="main-todo-card">
           <div className="page-container">
             <h2>Task Board</h2>
 
             {/*Task Form Creation*/}
-            <div
-              className="task-form-container"
-              style={{
-                backgroundColor: "#fff",
-                padding: "20px",
-                borderRadius: "12px",
-                border: "1px solid #e5e7eb",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-                marginBottom: "24px",
-              }}
-            >
-              <div style={{ display: "flex", gap: "10px" }}>
+            <div className="task-form-container">
+              <div className="task-form-row">
                 <input
-                  className="form-input"
-                  style={{ flex: 2 }}
+                  className="form-input flex-2"
                   placeholder="Task Title"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                 />
                 <select
-                  className="form-select"
-                  style={{ flex: 1, marginBottom: "8px" }}
+                  className="form-select flex-1"
                   value={newTaskType}
                   onChange={(e) => setNewTaskType(e.target.value)}
                 >
@@ -115,7 +102,7 @@ export default function TaskBoard() {
                   <option value="exam">Exam</option>
                 </select>
               </div>
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div className="task-form-row">
                 <input
                   type="date"
                   style={{ flex: 1 }}
@@ -124,8 +111,7 @@ export default function TaskBoard() {
                   onChange={(e) => setNewTaskDate(e.target.value)}
                 />
                 <input
-                  className="form-input"
-                  style={{ flex: 2 }}
+                  className="form-input flex-2"
                   placeholder="Description"
                   value={newTaskDesc}
                   onChange={(e) => setNewTaskDesc(e.target.value)}
@@ -137,14 +123,7 @@ export default function TaskBoard() {
               </button>
             </div>
             {/* Add New Stage Control */}
-            <div
-              style={{
-                display: "flex",
-                gap: "10px",
-                marginBottom: "20px",
-                alignItems: "center",
-              }}
-            >
+            <div className="add-stage-row">
               <input
                 className="form-input"
                 placeholder="New Column Name..."
@@ -165,33 +144,19 @@ export default function TaskBoard() {
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => handleDrop(e, stage)}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: "15px",
-                    }}
-                  >
+                  <div className="kanban-header">
                     <h3 style={{ margin: 0 }}>{stage}</h3>
                     {!["To-Do", "In Progress", "Done"].includes(stage) && (
-                    <button
-                      onClick={() => {
-                        setDeletingStage(stage);
-                      }}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#ef4444",
-                        cursor: "pointer",
-                        fontSize: "1.2rem",
-                        fontWeight: "bold",
-                        borderRadius: "20px",
-                      }}
-                      title="Delete Column"
-                    >
-                      &times;
-                    </button>)}
+                      <button
+                        onClick={() => {
+                          setDeletingStage(stage);
+                        }}
+                        className="delete-column-btn"
+                        title="Delete Column"
+                      >
+                        &times;
+                      </button>
+                    )}
                   </div>
                   {mainTasks
                     .filter((task) => task.status === stage)
@@ -250,9 +215,7 @@ export default function TaskBoard() {
               <h3>Edit Task</h3>
               <form onSubmit={handleSaveEdit}>
                 <div style={{ marginBottom: "15px" }}>
-                  <label style={{ display: "block", marginBottom: "5px" }}>
-                    Title
-                  </label>
+                  <label className="label-style">Title</label>
                   <input
                     name="title"
                     className="form-input"
@@ -261,9 +224,7 @@ export default function TaskBoard() {
                   />
                 </div>
                 <div style={{ marginBottom: "15px" }}>
-                  <label style={{ display: "block", marginBottom: "5px" }}>
-                    Due Date
-                  </label>
+                  <label className="label-style">Due Date</label>
                   <input
                     name="dueDate"
                     type="date"
@@ -272,9 +233,7 @@ export default function TaskBoard() {
                   />
                 </div>
                 <div style={{ marginBottom: "15px" }}>
-                  <label style={{ display: "block", marginBottom: "5px" }}>
-                    Description
-                  </label>
+                  <label className="label-style">Description</label>
                   <textarea
                     name="description"
                     className="form-input"
@@ -282,13 +241,7 @@ export default function TaskBoard() {
                     rows="4"
                   />
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    gap: "10px",
-                  }}
-                >
+                <div className="modal-actions">
                   <button
                     type="button"
                     className="btn"
@@ -314,13 +267,7 @@ export default function TaskBoard() {
                 <strong>{deletingStage}</strong> column? This action cannot be
                 undone.
               </p>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: "10px",
-                }}
-              >
+              <div className="modal-actions">
                 <button
                   type="button"
                   className="btn"
@@ -329,8 +276,7 @@ export default function TaskBoard() {
                   Cancel
                 </button>
                 <button
-                  className="btn"
-                  style={{ backgroundColor: "#ef4444", color: "white" }}
+                  className="btn danger"
                   onClick={() => {
                     removeStage(deletingStage);
                     setDeletingStage(null);

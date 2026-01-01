@@ -1,3 +1,5 @@
+console.log("Vite Env Check:", import.meta.env.VITE_FIREBASE_API_KEY);
+
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
