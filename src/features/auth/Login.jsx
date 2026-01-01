@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import '../../styles/forms.css';
 import '../../styles/buttons.css';
-import { logIn } from '../../services/authService';
+import { logIn, logInExternal } from '../../services/authService';
+import SocialBtn from '../../components/ui/SocialBtn';
+
 
 const Login = ({ onNavigate }) => { // Added onNavigate prop
   const [email, setEmail] = useState('');
@@ -19,6 +21,15 @@ const Login = ({ onNavigate }) => { // Added onNavigate prop
 
     try {
       await logIn(email, password)
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleExternalLogin = (provider) => async () => {
+    setError(null);
+    try {
+      await logInExternal(provider);
     } catch (err) {
       setError(err.message);
     }
@@ -79,13 +90,9 @@ const Login = ({ onNavigate }) => { // Added onNavigate prop
             </button>
           </form>
 
-          <div style={authStyles.divider}>Or Sign in with</div>
 
-          <div style={authStyles.socialButtons}>
-            <button className="btn" style={authStyles.socialBtn}>Google</button>
-            <button className="btn" style={authStyles.socialBtn}>Apple ID</button>
-            <button className="btn" style={authStyles.socialBtn}>Facebook</button>
-          </div>
+          <SocialBtn onSocialLogin={handleExternalLogin} mode="in" />
+
 
           <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem' }}>
             Don't have an account?{" "}

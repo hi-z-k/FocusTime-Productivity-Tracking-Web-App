@@ -1,21 +1,33 @@
 import React, { useState } from 'react';
 import '../../styles/forms.css';
 import '../../styles/buttons.css';
-import { signUp } from '../../services/authService';
+import { signUp, logInExternal } from '../../services/authService';
+import SocialBtn from '../../components/ui/SocialBtn';
 
-const Register = ({ onNavigate }) => { // Added onNavigate prop
+
+const Register = ({ onNavigate }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: ''
   });
-const [error, setError] = useState(null);
+  const [error, setError] = useState(null);
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) setError(null);
   };
 
-const handleRegister = async (e) => {
+  const handleExternalLogin = (provider) => async () => {
+    setError(null);
+    try {
+      await logInExternal(provider);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+
+  const handleRegister = async (e) => {
     e.preventDefault();
     setError(null);
 
@@ -56,7 +68,7 @@ const handleRegister = async (e) => {
           </p>
           {error && (
             <div style={authStyles.errorBadge}>
-              <span style={{ marginRight: '8px'}}></span>
+              <span style={{ marginRight: '8px' }}></span>
               {error}
             </div>
           )}
@@ -105,18 +117,13 @@ const handleRegister = async (e) => {
             </button>
           </form>
 
-          <div style={authStyles.divider}>Or Sign up with</div>
 
-          <div style={authStyles.socialButtons}>
-            <button className="btn" style={authStyles.socialBtn}>Google</button>
-            <button className="btn" style={authStyles.socialBtn}>Apple ID</button>
-            <button className="btn" style={authStyles.socialBtn}>Facebook</button>
-          </div>
+          <SocialBtn onSocialLogin={handleExternalLogin} mode="in" />
 
           <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem' }}>
             Already have an account?{" "}
-            <span 
-              onClick={() => onNavigate('login')} 
+            <span
+              onClick={() => onNavigate('login')}
               style={{ color: '#3b82f6', cursor: 'pointer', fontWeight: '600' }}
             >
               Login
@@ -182,16 +189,16 @@ const authStyles = {
     border: '1px solid #ddd',
     background: 'white',
   },
-    errorBadge: {
+  errorBadge: {
     display: 'flex',
     alignItems: 'center',
-    backgroundColor: '#fef2f2', 
-    color: '#dc2626',           
+    backgroundColor: '#fef2f2',
+    color: '#dc2626',
     padding: '12px 16px',
     borderRadius: '8px',
     marginBottom: '1.5rem',
     fontSize: '0.9rem',
-    fontWeight: '500',          
+    fontWeight: '500',
     border: '1px solid #fee2e2',
     transition: 'all 0.2s ease-in-out',
   },
