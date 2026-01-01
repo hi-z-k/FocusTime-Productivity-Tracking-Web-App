@@ -7,16 +7,20 @@ const Login = ({ onNavigate }) => { // Added onNavigate prop
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-const [error, setError] = useState(null); 
+  const [error, setError] = useState(null);
 
+  const handleInput = (setter) => (e) => {
+  setter(e.target.value);
+  if (error) setError(null);
+};
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError(null); 
+    setError(null);
 
     try {
       await logIn(email, password)
     } catch (err) {
-      setError(err.message); 
+      setError(err.message);
     }
   };
 
@@ -39,7 +43,12 @@ const [error, setError] = useState(null);
           <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
             Enter your details to get started
           </p>
-
+          {error && (
+            <div style={authStyles.errorBadge}>
+              <span style={{ marginRight: '8px'}}></span>
+              {error}
+            </div>
+          )}
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: '1rem' }}>
               <label style={authStyles.label}>Email</label>
@@ -48,7 +57,7 @@ const [error, setError] = useState(null);
                 className="form-input"
                 placeholder="name@gmail.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleInput(setEmail)}
                 required
               />
             </div>
@@ -60,7 +69,7 @@ const [error, setError] = useState(null);
                 className="form-input"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handleInput(setPassword)}
                 required
               />
             </div>
@@ -80,8 +89,8 @@ const [error, setError] = useState(null);
 
           <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem' }}>
             Don't have an account?{" "}
-            <span 
-              onClick={() => onNavigate('register')} 
+            <span
+              onClick={() => onNavigate('register')}
               style={{ color: '#3b82f6', cursor: 'pointer', fontWeight: '600' }}
             >
               Register Now
@@ -149,6 +158,19 @@ const authStyles = {
     flex: 1,
     border: '1px solid #ddd',
     background: 'white',
+  },
+  errorBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2', 
+    color: '#dc2626',           
+    padding: '12px 16px',
+    borderRadius: '8px',
+    marginBottom: '1.5rem',
+    fontSize: '0.9rem',
+    fontWeight: '500',          
+    border: '1px solid #fee2e2',
+    transition: 'all 0.2s ease-in-out',
   },
 };
 
