@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { AuthContext } from "./context/AuthContext";
 import Sidebar from "./components/layout/Sidebar";
 import Navbar from "./components/layout/Navbar";
 import TaskBoard from "./features/tasks/TaskBoard";
@@ -8,46 +9,49 @@ import Profile from "./features/auth/Profile";
 import Pomodoro from "./features/pomodoro/Pomodoro";
 
 export default function App() {
-  const [currentView, setCurrentView] = useState("register");
-  // Shared state for the streak
+const { user, loading } = useContext(AuthContext);
+  const [currentView, setCurrentView] = useState("login");
   const [streak, setStreak] = useState(10);
 
+  useEffect(() => {
+    if (user && (currentView === "login" || currentView === "register")) {
+      setCurrentView("tasks");
+    }
+    if (!user && currentView !== "login" && currentView !== "register") {
+      setCurrentView("login");
+    }
+  }, [user, currentView]);
+
+  if (!user) {
+    return (
+      <div className="auth-wrapper">
+        {currentView === "register" ? (
+          <Register onNavigate={setCurrentView} />
+        ) : (
+          <Login onNavigate={setCurrentView} />
+        )}
+      </div>
+    );
+  }
+
+  // 3) Authenticated users see the full app
   return (
     <div
       className="app-container"
-      style={{
-        display: "flex",
-        backgroundColor: "#f8f9fa",
-        minHeight: "100vh",
-      }}
+      style={{ display: "flex", backgroundColor: "#f8f9fa", minHeight: "100vh" }}
     >
-      {currentView !== "login" && currentView !== "register" && (
-        <Sidebar onNavigate={setCurrentView} currentView={currentView} />
-      )}
+      <Sidebar onNavigate={setCurrentView} currentView={currentView} />
 
-      <div
-        className="main-wrapper"
-        style={{
-          flex: 1,
-          marginLeft:
-            currentView !== "login" && currentView !== "register"
-              ? "260px"
-              : "0",
-        }}
-      >
-        {currentView !== "login" && currentView !== "register" && (
-          <Navbar
-            title={
-              currentView === "profile"
-                ? "PERSONAL INFORMATION"
-                : currentView.toUpperCase()
-            }
-            streak={streak}
-          />
-        )}
+      <div className="main-wrapper" style={{ flex: 1, marginLeft: "260px" }}>
+        <Navbar
+          title={
+            currentView === "profile"
+              ? "PERSONAL INFORMATION"
+              : currentView.toUpperCase()
+          }
+          streak={streak}
+        />
 
-        {currentView === "login" && <Login onNavigate={setCurrentView} />}
-        {currentView === "register" && <Register onNavigate={setCurrentView} />}
         {currentView === "tasks" && <TaskBoard />}
         {currentView === "profile" && (
           <Profile streak={streak} setStreak={setStreak} />

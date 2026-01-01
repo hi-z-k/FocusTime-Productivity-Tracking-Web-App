@@ -1,28 +1,51 @@
 import React, { useState } from 'react';
 import '../../styles/forms.css';
 import '../../styles/buttons.css';
+import { signUp, logInExternal } from '../../services/authService';
+import SocialBtn from '../../components/ui/SocialBtn';
 
-const Register = ({ onNavigate }) => { // Added onNavigate prop
+
+const Register = ({ onNavigate }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: ''
   });
-
+  const [error, setError] = useState(null);
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (error) setError(null);
   };
 
-  const handleRegister = (e) => {
+  const handleExternalLogin = (provider) => async () => {
+    setError(null);
+    try {
+      await logInExternal(provider);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+
+  const handleRegister = async (e) => {
     e.preventDefault();
+    setError(null);
+
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
-    console.log("Registering:", formData);
-    // After logic, navigate to profile
-    if (onNavigate) onNavigate('profile');
+
+    try {
+      await signUp(formData.email, formData.password)
+    } catch (err) {
+      setError(err.message);
+    }
   };
+
+
+
+
 
   return (
     <div style={authStyles.container}>
@@ -43,7 +66,12 @@ const Register = ({ onNavigate }) => { // Added onNavigate prop
           <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
             Create an account to continue
           </p>
-
+          {error && (
+            <div style={authStyles.errorBadge}>
+              <span style={{ marginRight: '8px' }}></span>
+              {error}
+            </div>
+          )}
           <form onSubmit={handleRegister}>
             <div style={{ marginBottom: '1rem' }}>
               <label style={authStyles.label}>Email</label>
@@ -89,18 +117,13 @@ const Register = ({ onNavigate }) => { // Added onNavigate prop
             </button>
           </form>
 
-          <div style={authStyles.divider}>Or Sign up with</div>
 
-          <div style={authStyles.socialButtons}>
-            <button className="btn" style={authStyles.socialBtn}>Google</button>
-            <button className="btn" style={authStyles.socialBtn}>Apple ID</button>
-            <button className="btn" style={authStyles.socialBtn}>Facebook</button>
-          </div>
+          <SocialBtn onSocialLogin={handleExternalLogin} mode="in" />
 
           <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem' }}>
             Already have an account?{" "}
-            <span 
-              onClick={() => onNavigate('login')} 
+            <span
+              onClick={() => onNavigate('login')}
               style={{ color: '#3b82f6', cursor: 'pointer', fontWeight: '600' }}
             >
               Login
@@ -165,6 +188,19 @@ const authStyles = {
     flex: 1,
     border: '1px solid #ddd',
     background: 'white',
+  },
+  errorBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    color: '#dc2626',
+    padding: '12px 16px',
+    borderRadius: '8px',
+    marginBottom: '1.5rem',
+    fontSize: '0.9rem',
+    fontWeight: '500',
+    border: '1px solid #fee2e2',
+    transition: 'all 0.2s ease-in-out',
   },
 };
 

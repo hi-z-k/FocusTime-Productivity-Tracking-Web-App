@@ -1,16 +1,38 @@
 import React, { useState } from 'react';
 import '../../styles/forms.css';
 import '../../styles/buttons.css';
+import { logIn, logInExternal } from '../../services/authService';
+import SocialBtn from '../../components/ui/SocialBtn';
+
 
 const Login = ({ onNavigate }) => { // Added onNavigate prop
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = (e) => {
+  const [error, setError] = useState(null);
+
+  const handleInput = (setter) => (e) => {
+  setter(e.target.value);
+  if (error) setError(null);
+};
+  const handleLogin = async (e) => {
     e.preventDefault();
-    console.log("Login with:", email, password);
-    // After logic, you could call onNavigate('profile') to log them in
-    if (onNavigate) onNavigate('profile'); 
+    setError(null);
+
+    try {
+      await logIn(email, password)
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleExternalLogin = (provider) => async () => {
+    setError(null);
+    try {
+      await logInExternal(provider);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   return (
@@ -32,7 +54,12 @@ const Login = ({ onNavigate }) => { // Added onNavigate prop
           <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
             Enter your details to get started
           </p>
-
+          {error && (
+            <div style={authStyles.errorBadge}>
+              <span style={{ marginRight: '8px'}}></span>
+              {error}
+            </div>
+          )}
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: '1rem' }}>
               <label style={authStyles.label}>Email</label>
@@ -41,7 +68,7 @@ const Login = ({ onNavigate }) => { // Added onNavigate prop
                 className="form-input"
                 placeholder="name@gmail.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleInput(setEmail)}
                 required
               />
             </div>
@@ -53,7 +80,7 @@ const Login = ({ onNavigate }) => { // Added onNavigate prop
                 className="form-input"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handleInput(setPassword)}
                 required
               />
             </div>
@@ -63,18 +90,14 @@ const Login = ({ onNavigate }) => { // Added onNavigate prop
             </button>
           </form>
 
-          <div style={authStyles.divider}>Or Sign in with</div>
 
-          <div style={authStyles.socialButtons}>
-            <button className="btn" style={authStyles.socialBtn}>Google</button>
-            <button className="btn" style={authStyles.socialBtn}>Apple ID</button>
-            <button className="btn" style={authStyles.socialBtn}>Facebook</button>
-          </div>
+          <SocialBtn onSocialLogin={handleExternalLogin} mode="in" />
+
 
           <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem' }}>
             Don't have an account?{" "}
-            <span 
-              onClick={() => onNavigate('register')} 
+            <span
+              onClick={() => onNavigate('register')}
               style={{ color: '#3b82f6', cursor: 'pointer', fontWeight: '600' }}
             >
               Register Now
@@ -142,6 +165,19 @@ const authStyles = {
     flex: 1,
     border: '1px solid #ddd',
     background: 'white',
+  },
+  errorBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2', 
+    color: '#dc2626',           
+    padding: '12px 16px',
+    borderRadius: '8px',
+    marginBottom: '1.5rem',
+    fontSize: '0.9rem',
+    fontWeight: '500',          
+    border: '1px solid #fee2e2',
+    transition: 'all 0.2s ease-in-out',
   },
 };
 
