@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { useTaskBoard } from "./useTaskBoard";
+// src/features/tasks/TaskBoard.jsx
+import { useTaskBoard } from "../../hooks/useTaskBoard"; // Point to the Firebase version
 import TaskCard from "./TaskCard";
 
 import "../../styles/global.css";
