@@ -16,7 +16,7 @@ const MODES = {
   long: 15 * 60,
 };
 
-export default function Pomodoro() {
+export default function Pomodoro({ onFocusComplete }) {
   const { user } = useContext(AuthContext);
 
   const [mode, setMode] = useState("focus");
@@ -114,6 +114,10 @@ export default function Pomodoro() {
       duration,
       status: "completed",
     });
+    // ✅ REPORT TO HOME (ONLY FOCUS MODE)
+    if (mode === "focus" && onFocusComplete) {
+      onFocusComplete(Math.floor(duration / 60));
+    }
 
     await updateLivePointer(user.uid, {
       isRunning: false,

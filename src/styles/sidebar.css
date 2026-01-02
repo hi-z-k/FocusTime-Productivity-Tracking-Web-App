@@ -1,0 +1,110 @@
+:root {
+  --sidebar-width: 240px; /* Narrower width */
+  --sidebar-bg: #f8f9fa;
+  --sidebar-text: #555;
+  --sidebar-border: #ececed;
+  --nav-item-padding: 8px 12px; /* Reduced from 15px */
+  --nav-gap: 4px; /* Tighter gap between items */
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  height: 100vh;
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Pushes footer to bottom */
+  padding: 20px 12px; /* Reduced padding */
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow: hidden; /* NO SCROLLING */
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+/* --- Logo Section --- */
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px; /* Reduced from 40px */
+}
+
+.focustime-logo {
+  width: 35px; /* Smaller logo */
+  height: 35px;
+}
+
+.logo-text {
+  font-size: 1rem; /* Smaller text */
+  font-weight: 700;
+}
+
+/* --- Navigation List --- */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nav-gap);
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--nav-item-padding);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--sidebar-text);
+  font-size: 0.85rem; /* Compact font size */
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.nav-item .nav-icon {
+  font-size: 1.1rem; /* Slightly smaller icons */
+}
+
+.nav-item:hover, .nav-item.active {
+  background-color: #fff;
+  color: #a2d2ff;
+}
+
+/* --- Footer Section --- */
+.sidebar-footer {
+  border-top: 1px solid var(--sidebar-border);
+  padding-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--nav-gap);
+}
+
+.theme-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: var(--nav-item-padding);
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--sidebar-text);
+  opacity: 0.8;
+}
+
+.theme-toggle-container:hover {
+  opacity: 1;
+  color: #a2d2ff;
+}
+
+/* --- Logout Styling --- */
+.logout:hover {
+  background-color: #fff1f1 !important;
+  color: #ff4d4d !important;
+}
+
+/* Response: On very short screens, we decrease gaps even further */
+@media (max-height: 600px) {
+  .logo-section { margin-bottom: 10px; }
+  .nav-item { padding: 6px 10px; font-size: 0.8rem; }
+  .sidebar { padding: 10px; }
+}

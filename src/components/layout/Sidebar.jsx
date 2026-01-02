@@ -1,118 +1,66 @@
 import React, { useState } from "react";
-import "../../styles/layout.css";
+import "../../styles/sidebar.css";
 import logo from "../../assets/logo.png";
 import { logOut } from "../../services/authService";
 
+/// ... (imports remain the same)
 
-export default function Sidebar({ onNavigate, currentView }) {
+export default function Sidebar({ onNavigate, currentView, theme, setTheme }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const closeMenu = () => setIsOpen(false);
 
-  const handleNav = (view) => {
-    onNavigate(view);
-    closeMenu();
-  };
-  const handleLogout = async () => {
-    try {
-      await logOut();
-    } catch (error) {
-      console.error("Failed to log out:", error.message);
-    }
-  };
-
   return (
     <>
-      <button
-        className={`hamburger ${isOpen ? "is-active" : ""}`}
-        onClick={toggleMenu}
-      >
+      <button className={`hamburger ${isOpen ? "is-active" : ""}`} onClick={toggleMenu}>
         <span className="hamburger-box">{isOpen ? "✕" : "☰"}</span>
       </button>
 
       <aside className={`sidebar ${isOpen ? "open" : ""}`}>
-        <div className="sidebar-scroll-container">
-          {/* Logo Section */}
+        {/* TOP SECTION */}
+        <div className="sidebar-top">
           <div className="logo-section">
-            <div className="logo-placeholder">
-              <img src={logo} alt="FocusTime Logo" className="focustime-logo" />
-            </div>
-            <h2 style={{ fontSize: "1.2rem", fontWeight: "700" }}>FocusTime</h2>
+            <img src={logo} alt="FocusTime Logo" className="focustime-logo" />
+            <h2 className="logo-text">FocusTime</h2>
           </div>
 
           <nav className="sidebar-nav">
-            <div className="nav-item" style={{ cursor: "default" }}>
-              <span className="nav-icon">🏠</span>
-              <span className="nav-text">Home</span>
-            </div>
-
-            <div
-              className={`nav-item ${
-                currentView === "pomodoro" ? "active" : ""
-              }`}
-              onClick={() => handleNav("pomodoro")}
-            >
-              <span className="nav-icon">⏱️</span>
-              <span className="nav-text">Focus Session</span>
-            </div>
-
-            <div
-              className={`nav-item ${currentView === "tasks" ? "active" : ""}`}
-              onClick={() => handleNav("tasks")}
-            >
-              <span className="nav-icon">✅</span>
-              <span className="nav-text">Todo</span>
-            </div>
-
-            <div className="nav-item" style={{ cursor: "default" }}>
-              <span className="nav-icon">📝</span>
-              <span className="nav-text">FocusPad</span>
-            </div>
-
-            <div className="nav-item" style={{ cursor: "default" }}>
-              <span className="nav-icon">📺</span>
-              <span className="nav-text">YouTube</span>
-            </div>
-
-            <div className="nav-item" style={{ cursor: "default" }}>
-              <span className="nav-icon">📊</span>
-              <span className="nav-text">Progress Chart</span>
-            </div>
-
-            <div
-              className={`nav-item ${
-                currentView === "profile" ? "active" : ""
-              }`}
-              onClick={() => handleNav("profile")}
-            >
-              <span className="nav-icon">👤</span>
-              <span className="nav-text">Profile</span>
-            </div>
-
-            {/* Now Mentora and Logout are inside the same scrollable list */}
-            <div
-              className="nav-item"
-              style={{ cursor: "default", marginTop: "20px" }}
-            >
-              <span className="nav-icon">🎓</span>
-              <span className="nav-text">Mentora</span>
-            </div>
-
-            <div className="nav-item logout" onClick={handleLogout}>
-              <span className="nav-icon">🚪</span>
-              <span className="nav-text">Logout</span>
-            </div>
-
-            <div className="theme-toggle" style={{ padding: "20px 0" }}>
-              <span style={{ marginRight: "10px" }}>Light</span>
-              <span>Dark</span>
-            </div>
+            <NavItem id="home" icon="🏠" label="Home" active={currentView === "home"} onClick={onNavigate} />
+            <NavItem id="pomodoro" icon="⏱️" label="Focus Session" active={currentView === "pomodoro"} onClick={onNavigate} />
+            <NavItem id="tasks" icon="✅" label="Todo" active={currentView === "tasks"} onClick={onNavigate} />
+            <NavItem id="focuspad" icon="📝" label="FocusPad" active={currentView === "focuspad"} onClick={onNavigate} />
+            <NavItem id="youtube" icon="📺" label="YouTube" onClick={onNavigate} />
+            <NavItem id="progress" icon="📊" label="Progress" active={currentView === "progress"} onClick={onNavigate} />
+            <NavItem id="profile" icon="👤" label="Profile" active={currentView === "profile"} onClick={onNavigate} />
+            <NavItem id="mentora" icon="🎓" label="Mentora" onClick={onNavigate} />
           </nav>
+        </div>
+
+        {/* BOTTOM SECTION */}
+        <div className="sidebar-footer">
+          <div className="theme-toggle-container" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
+            <span className="nav-icon">{theme === 'light' ? "🌙" : "☀️"}</span>
+            <span className="nav-text">Theme</span>
+          </div>
+          
+          <div className="nav-item logout" onClick={() => logOut()}>
+            <span className="nav-icon">🚪</span>
+            <span className="nav-text">Logout</span>
+          </div>
         </div>
       </aside>
 
       {isOpen && <div className="sidebar-overlay" onClick={closeMenu}></div>}
     </>
+  );
+}
+
+function NavItem({ id, icon, label, active, onClick }) {
+  return (
+    <div className={`nav-item ${active ? "active" : ""}`} onClick={() => onClick(id)}>
+      <span className="nav-icon">{icon}</span>
+      <span className="nav-text">{label}</span>
+    </div>
   );
 }

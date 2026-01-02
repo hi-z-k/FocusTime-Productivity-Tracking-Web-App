@@ -1,0 +1,143 @@
+.home-container {
+  padding: 30px 40px;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 40px;
+}
+
+/* LEFT SIDE */
+.home-title {
+  font-size: 2.4rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.home-tagline {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.home-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+/* Reuse existing buttons if you have them */
+.primary-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  background-color: #222;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.secondary-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  background-color: transparent;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+
+/* Cards */
+.card {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+}
+
+/* Notifications */
+.notifications-card {
+  max-width: 360px;
+}
+
+.notifications-card h3 {
+  margin-bottom: 14px;
+}
+
+.notification-item {
+  height: 40px;
+  background-color: #eee;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+/* RIGHT SIDE */
+.home-right {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.image-placeholder {
+  height: 220px;
+  border-radius: 16px;
+  background-color: #bdbdbd;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.about-card p {
+  color: #555;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.fade-in {
+  animation: fadeIn 0.35s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.focus-today {
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.app-container.dark {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+.app-container.dark .card {
+  background-color: #1e1e1e;
+}
+
+.app-container.dark .notification-item {
+  background-color: #2a2a2a;
+}
+
+.app-container.dark .home-tagline,
+.app-container.dark .focus-today {
+  color: #aaa;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .home-container {
+    padding: 20px;
+  }
+}
