@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { usePersonalInfo } from "../../hooks/usePersonalInfo"; // Import your hook
+import { useProgressAnalytics } from "../../hooks/useProgressAnalytics";
 
 import "../../styles/profile.css";
 
-const Profile = ({ streak, setStreak }) => {
+const Profile = () => {
   // 1. Initialize the hook
   const { personalInfo, loading, updateInfo } = usePersonalInfo();
+  const { data } = useProgressAnalytics();
+  const streak = data?.streak || 0;
 
   // 2. Local state for the form inputs
   const [formData, setFormData] = useState({
@@ -34,7 +37,6 @@ const Profile = ({ streak, setStreak }) => {
       // 4. Call the backend via the hook
       await updateInfo(formData);
 
-      setStreak((prev) => prev + 1);
       alert(
         "Profile Updated! Your streak has increased and data saved to cloud."
       );
@@ -67,7 +69,7 @@ const Profile = ({ streak, setStreak }) => {
             </button>
             <div className="streak-badge">
               <span>Daily Streak</span>
-              <span className="streak-count">🔥 {streak} Days</span>
+              <span className="streak-count">🔥 {data?.streak || 0} Days</span>
             </div>
           </div>
         </aside>

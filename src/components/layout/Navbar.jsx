@@ -1,7 +1,9 @@
 import React from "react";
 import "../../styles/navbar.css";
-
-const Navbar = ({ title = "To-Do", streak }) => {
+import { useProgressAnalytics } from "../../hooks/useProgressAnalytics";
+const Navbar = ({ title = "To-Do" }) => {
+  const { data } = useProgressAnalytics();
+  const streak = data?.streak || 0;
   return (
     <header className="top-navbar">
       <div className="navbar-content">
@@ -12,7 +14,9 @@ const Navbar = ({ title = "To-Do", streak }) => {
           <div className="user-profile-badge">
             <div className="user-text">
               <span className="user-name">User Name</span>
-              <span className="user-streak">🔥 {streak} Days Streak</span>
+              <span className="user-streak">
+                🔥 {data?.streak || 0} Days Streak
+              </span>
             </div>
             <div className="user-avatar"></div>
           </div>
