@@ -1,45 +1,72 @@
 import { useState, useEffect } from "react";
-// Import the Firebase functions from your service file
 import { 
   addTask as fbAddTask, 
   syncTasks, 
   updateTask as fbUpdateTask, 
-  deleteTask as fbDeleteTask 
+  deleteTask as fbDeleteTask,
+  addStageToDb,
+  syncStages,
+  deleteStageFromDb 
 } from "../services/firebase/taskService";
 
 export function useTaskBoard() {
   const [tasks, setTasks] = useState([]);
-  const [stages] = useState(["To-Do", "In Progress", "Done"]);
+  const [stages, setStages] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // 1. REAL-TIME SYNC: This pulls data from the cloud to your screen
   useEffect(() => {
-    console.log("Hook: Starting Firebase real-time sync...");
-    
-    // This connects to Firestore and listens for any changes
-    const unsubscribe = syncTasks((downloadedTasks) => {
-      console.log("Hook: Received tasks from Firestore:", downloadedTasks);
+    // Sync Tasks
+    const unsubscribeTasks = syncTasks((downloadedTasks) => {
       setTasks(downloadedTasks);
     });
 
-    // Cleanup: Stop listening when the user leaves the page
-    return () => unsubscribe();
+    // Sync Stages (Columns)
+    const unsubscribeStages = syncStages((downloadedStages) => {
+      if (downloadedStages.length === 0) {
+        setStages(["To-Do", "In Progress", "Done"]);
+      } else {
+        setStages(downloadedStages.map(s => s.name));
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      unsubscribeTasks();
+      unsubscribeStages();
+    };
   }, []);
 
-  // 2. ADD TASK: Sends new data to the cloud
   const addTask = async (taskData) => {
     try {
-      // We ensure it has a status so it's visible in the 'To-Do' column
+      const defaultStatus = stages[0] || "To-Do";
       await fbAddTask({
         ...taskData,
-        status: "To-Do" 
+        status: defaultStatus 
       });
     } catch (error) {
       console.error("Hook: Failed to add task:", error);
-      alert("Error adding task. Check your console.");
     }
   };
 
-  // 3. MOVE TASK (DRAG & DROP): Updates the status in the cloud
+  const addStage = async (name) => {
+    if (stages.includes(name)) return;
+    try {
+      await addStageToDb(name);
+    } catch (error) {
+      console.error("Hook: Failed to add stage:", error);
+    }
+  };
+
+  // UPDATED: This now triggers the backend deletion
+  const removeStage = async (name) => {
+    try {
+      await deleteStageFromDb(name);
+      console.log("Hook: Stage removed successfully");
+    } catch (error) {
+      console.error("Hook: Failed to remove stage:", error);
+    }
+  };
+
   const moveTask = async (taskId, newStage) => {
     try {
       await fbUpdateTask(taskId, { status: newStage });
@@ -48,7 +75,6 @@ export function useTaskBoard() {
     }
   };
 
-  // 4. DELETE TASK: Removes from cloud
   const deleteTask = async (taskId) => {
     try {
       await fbDeleteTask(taskId);
@@ -57,7 +83,6 @@ export function useTaskBoard() {
     }
   };
 
-  // 5. EDIT TASK: Updates titles/descriptions in the cloud
   const editTask = async (taskId, updateData) => {
     try {
       await fbUpdateTask(taskId, updateData);
@@ -66,13 +91,24 @@ export function useTaskBoard() {
     }
   };
 
-  // Placeholder functions for stages if you haven't moved them to Firebase yet
-  const addStage = (name) => console.log("Add stage logic needed for Firebase");
-  const removeStage = (name) => console.log("Remove stage logic needed for Firebase");
+  const unsubscribeStages = syncStages((downloadedStages) => {
+  const defaultStages = ["To-Do", "In Progress", "Done"];
+  
+  // Extract custom names from Firestore
+  const customStages = downloadedStages.map(s => s.name);
+  
+  // Combine them: Defaults first, then custom ones
+  // Set allows us to avoid duplicates if "To-Do" is also in the DB
+  const combinedStages = [...new Set([...defaultStages, ...customStages])];
+  
+  setStages(combinedStages);
+  setLoading(false);
+});
 
   return {
     tasks,
     stages,
+    loading,
     addTask,
     editTask,
     deleteTask,
