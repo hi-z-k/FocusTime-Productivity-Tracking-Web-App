@@ -1,5 +1,5 @@
 import React from "react";
-// Recharts for data visualization
+
 import {
   BarChart,
   Bar,
@@ -9,61 +9,82 @@ import {
   Pie,
   Cell,
 } from "recharts";
-// Gamification logic for Pet evolution and outfits
+// gamification logic for Pet evolution and outfits
 import { getPetMood, getPetEvolution } from "../../services/gamificationLogic";
+import { useProgressAnalytics } from "../../hooks/useProgressAnalytics";
 import "../../styles/progress.css";
 
-// Mock Data for UI Review (Replace with Firestore data later)
-const mockStats = {
-  hoursSpent: 28.5,
-  dailyGoal: 8,
-  streak: 15, // Change this to 0, 5, or 15 to test different outfits!
-  completedTasks: 10,
-  totalTasks: 15,
-  weeklyData: [
-    { day: "M", value: 45 },
-    { day: "T", value: 75 },
-    { day: "W", value: 30 },
-    { day: "T", value: 90 },
-    { day: "F", value: 60 },
-    { day: "S", value: 20 },
-    { day: "S", value: 10 },
-  ],
-  assignments: [
-    { title: "Database Schema Design", completed: true },
-    { title: "UI Mockup Review", completed: true },
-    { title: "Integrate Firebase Auth", completed: false },
-    { title: "Weekly Progress Chart", completed: false },
-  ],
-  achievements: [
-    { id: 1, icon: "🌅", title: "Early Bird", unlocked: true },
-    { id: 2, icon: "🔥", title: "7 Day Streak", unlocked: true },
-    { id: 3, icon: "👑", title: "Deep Work Master", unlocked: false },
-  ],
-};
-
-const COLORS = ["#8884d8", "#e0e0e0"]; // Purple for progress, Light gray for empty
-
+const COLORS = ["#8884d8", "#e0e0e0"];
 export default function ProgressChart() {
-  // Get Gamified states based on stats
-  const petBase = getPetEvolution(mockStats.hoursSpent);
-  const petMood = getPetMood(mockStats.streak);
+  const { data, loading, error } = useProgressAnalytics();
 
-  // Chart Data Calculations
+  // shows loading state
+  if (loading || !data) {
+    return (
+      <div className="progress-dashboard">
+        <div className="bento-grid">
+          <div
+            className="card"
+            style={{
+              gridColumn: "span 1",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "120px",
+            }}
+          >
+            <div style={{ textAlign: "center", color: "#999" }}>
+              <div style={{ fontSize: "24px", marginBottom: "8px" }}>⏳</div>
+              <div>Loading analytics...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // shows error state
+  if (error) {
+    return (
+      <div className="progress-dashboard">
+        <div className="bento-grid">
+          <div
+            className="card"
+            style={{
+              gridColumn: "span 1",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "120px",
+            }}
+          >
+            <div style={{ textAlign: "center", color: "#dc2626" }}>
+              <div style={{ fontSize: "24px", marginBottom: "8px" }}>⚠️</div>
+              <div>Error loading data</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const petBase = getPetEvolution(data.hoursSpent || 0);
+  const petMood = getPetMood(data.streak || 0);
+
   const timeData = [
-    { value: mockStats.hoursSpent % 10 },
-    { value: 10 - (mockStats.hoursSpent % 10) },
+    { value: (data.hoursSpent || 0) % 10 },
+    { value: 10 - ((data.hoursSpent || 0) % 10) },
   ];
 
   const taskData = [
-    { value: mockStats.completedTasks },
-    { value: mockStats.totalTasks - mockStats.completedTasks },
+    { value: data.completedTasks || 0 },
+    { value: (data.totalTasks || 0) - (data.completedTasks || 0) },
   ];
 
   return (
     <div className="progress-dashboard">
       <div className="bento-grid">
-        {/* 1. Time Spent Card */}
+        {/* time spent card */}
         <div className="card time-spent">
           <div className="card-content">
             <p className="card-label">Focus XP</p>
@@ -87,7 +108,7 @@ export default function ProgressChart() {
           </div>
         </div>
 
-        {/* 2. FOCUS PET (With Dynamic Outfits/Moods) */}
+        {/*focus pet (with dynamic moods) */}
         <div className={`card pet-card ${petMood.class}`}>
           <p className="card-label">Focus Companion</p>
           <div className="pet-container">
@@ -107,11 +128,11 @@ export default function ProgressChart() {
           </div>
         </div>
 
-        {/* 3. ACHIEVEMENTS GALLERY */}
+        {/* achievments gallery */}
         <div className="card achievements-card">
           <p className="card-label">Milestones</p>
           <div className="badge-row">
-            {mockStats.achievements.map((ach) => (
+            {(data.achievements || []).map((ach) => (
               <div
                 key={ach.id}
                 className={`badge-item ${ach.unlocked ? "" : "locked"}`}
@@ -123,11 +144,11 @@ export default function ProgressChart() {
             ))}
           </div>
           <p className="streak-footer">
-            Current Streak: {mockStats.streak} Days
+            Current Streak: {data.streak || 0} Days
           </p>
         </div>
 
-        {/* 4. Task Completion Mini-Chart */}
+        {/* task completion mini-chart */}
         <div className="card task-completion">
           <ResponsiveContainer width="100%" height={90}>
             <PieChart>
@@ -147,11 +168,11 @@ export default function ProgressChart() {
           <p className="tiny-label">Tasks Done</p>
         </div>
 
-        {/* 5. Weekly Progress Bar Chart (Spans 3 columns in CSS) */}
+        {/* weekly progress bar chart (spans 3 columns in CSS) */}
         <div className="card weekly-chart">
           <h3>Weekly Progress</h3>
           <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={mockStats.weeklyData}>
+            <BarChart data={data.weeklyData || []}>
               <Bar
                 dataKey="value"
                 fill="#8884d8"
@@ -168,11 +189,11 @@ export default function ProgressChart() {
           </ResponsiveContainer>
         </div>
 
-        {/* 6. Assignment Tracker */}
+        {/* assignment tracker */}
         <div className="card assignment-tracker">
-          <h3>Assignments ({mockStats.assignments.length})</h3>
+          <h3>Assignments ({(data.assignments || []).length})</h3>
           <div className="tracker-list">
-            {mockStats.assignments.map((item, index) => (
+            {(data.assignments || []).map((item, index) => (
               <div key={index} className="tracker-item">
                 <div
                   className={`checkbox-mock ${item.completed ? "checked" : ""}`}
