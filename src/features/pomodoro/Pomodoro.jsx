@@ -11,7 +11,7 @@ import Controls from "./Controls";
 import "../../styles/pomodoro.css";
 
 const MODES = {
-  focus: 25 * 60,
+  focus: 1/6 * 60,
   short: 5 * 60,
   long: 15 * 60,
 };

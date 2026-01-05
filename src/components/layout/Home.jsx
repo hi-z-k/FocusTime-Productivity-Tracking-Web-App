@@ -1,8 +1,9 @@
 import React from "react";
 import "../../styles/HomePage.css";
 import img from "../../assets/hero-img.png";
+import NotificationList from "../ui/NotificationList";
 
-export default function Home({ onNavigate, notifications, focusMinutes }) {
+export default function Home({ onNavigate, notifications, focusMinutes, userId }) {
   return (
     <div className="home-container fade-in">
       <div className="home-grid">
@@ -32,19 +33,10 @@ export default function Home({ onNavigate, notifications, focusMinutes }) {
             </button>
           </div>
 
-          <div className="card notifications-card">
-            <h3>Notifications</h3>
-
-            {notifications.length === 0 ? (
-              <p className="empty-text">No notifications</p>
-            ) : (
-              notifications.map((note, index) => (
-                <div key={index} className="notification-item">
-                  {note}
-                </div>
-              ))
-            )}
-          </div>
+          <NotificationList 
+            userId={userId} 
+            notifications={notifications} 
+          />
         </div>
 
         <div className="home-right">
