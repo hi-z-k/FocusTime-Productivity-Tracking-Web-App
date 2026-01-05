@@ -1,13 +1,14 @@
-/* 1. THEME & CONTAINER */
+/* src/styles/progress.css */
+
 .progress-dashboard {
   --pg-bg: var(--background, #f8f9fa);
   --pg-card: var(--surface, #ffffff);
   --pg-text: var(--text-main, #1f2937);
   --pg-muted: var(--text-muted, #6b7280);
   --pg-border: var(--border, #e5e7eb);
-  --pg-accent: var(--primary, #3b82f6);
+  --pg-accent: #8884d8;
   --pg-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
-
+  
   padding: 40px 20px;
   background-color: var(--pg-bg);
   min-height: 100vh;
@@ -15,142 +16,128 @@
   transition: all 0.3s ease;
 }
 
-/* 2. BENTO GRID LAYOUT */
+/* BENTO GRID SETUP - Desktop */
 .bento-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-template-areas: 
-    "time streak motiv task"
+    "time pet achiev task"
     "weekly weekly weekly tracker";
   gap: 24px;
   max-width: 1200px;
-  margin: 0 0 0 10px;
+  margin: 0 auto;
 }
 
-/* 3. CARD DESIGN */
+/* CARD BASE STYLES */
 .card {
   background: var(--pg-card);
   border-radius: 28px;
   padding: 24px;
   box-shadow: var(--pg-shadow);
   border: 1px solid var(--pg-border);
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
 .card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
   border-color: var(--pg-accent);
 }
 
-/* Area Mapping */
+/* GRID AREA ASSIGNMENTS */
 .time-spent { grid-area: time; }
-.streak-mini { grid-area: streak; text-align: center; }
-.daily-motivation { grid-area: motiv; }
+.pet-card { grid-area: pet; }
+.achievements-card { grid-area: achiev; }
 .task-completion { grid-area: task; text-align: center; }
-.weekly-chart { grid-area: weekly; }
+.weekly-chart { grid-area: weekly; min-height: 350px; }
 .assignment-tracker { grid-area: tracker; }
 
-/* 4. TYPOGRAPHY & ELEMENTS */
+/* RECHART CONTAINER FIX */
+.recharts-responsive-container {
+  margin: 0 auto;
+}
+
+/* TEXT STYLES */
 .card-label { 
-  font-size: 0.85rem; 
-  font-weight: 600;
+  font-size: 0.75rem; 
+  font-weight: 700;
   color: var(--pg-muted); 
   margin-bottom: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
-.streak-num { 
-  font-size: 2.5rem; 
-  font-weight: 800; 
-  color: var(--pg-text);
+.tiny-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--pg-accent);
+  margin-top: 8px;
 }
 
-.quote { 
-  font-style: italic; 
-  color: var(--pg-text); 
-  line-height: 1.6;
-  font-size: 0.95rem;
+.strikethrough {
+  text-decoration: line-through !important;
+  opacity: 0.5;
+  color: var(--pg-muted);
 }
 
-/* 5. GAMIFICATION VISUALS */
+/* PET & ANIMATIONS */
+.pet-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: auto;
+}
+
 .pet-visual-wrapper {
-  position: relative;
-  display: inline-block;
-  font-size: 4rem;
-  margin-bottom: 10px;
+  font-size: 3.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   animation: floatPet 3s ease-in-out infinite;
 }
 
 @keyframes floatPet {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+  50% { transform: translateY(-10px); }
 }
 
-.badge-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 15px;
-}
-
-.badge-item {
-  background: var(--pg-bg);
-  padding: 10px;
-  border-radius: 14px;
-  border: 1px solid var(--pg-border);
-  font-size: 1.3rem;
-  transition: transform 0.2s ease;
-}
-
-.badge-item.locked {
-  filter: grayscale(1);
-  opacity: 0.25;
-}
-
-/* 6. PROGRESS BARS */
-.xp-bar-mini {
-  width: 100%;
-  height: 8px;
-  background: var(--pg-border);
-  border-radius: 10px;
-  margin-top: 10px;
-  overflow: hidden;
-}
-
-.xp-fill-mini {
-  height: 100%;
-  background: var(--pg-accent);
-  border-radius: 10px;
-  transition: width 1s ease-in-out;
-}
-
-/* 7. TRACKER LIST */
+/* ASSIGNMENT TRACKER & CHECKBOXES */
 .tracker-list {
   margin-top: 15px;
+  overflow-y: auto;
+  max-height: 250px;
+  scrollbar-width: thin;
 }
 
 .tracker-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 0;
+  padding: 14px 8px;
   border-bottom: 1px solid var(--pg-border);
-  color: var(--pg-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 12px;
+}
+
+.tracker-item:hover {
+  background: rgba(136, 132, 216, 0.08);
 }
 
 .checkbox-mock {
-  width: 22px;
+  min-width: 22px;
   height: 22px;
   border: 2px solid var(--pg-accent);
-  border-radius: 7px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
   font-size: 0.8rem;
+  transition: all 0.2s ease;
+  flex-shrink: 0; /* Important for responsiveness */
 }
 
 .checkbox-mock.checked {
@@ -158,40 +145,64 @@
   color: white;
 }
 
-.strikethrough {
-  text-decoration: line-through;
-  color: var(--pg-muted);
-}
+/* RESPONSIVE BREAKPOINTS */
 
-/* 8. RESPONSIVE BREAKPOINTS */
-@media (max-width: 1024px) {
+/* Tablet Layout (1100px and below) */
+@media (max-width: 1100px) {
   .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
     grid-template-areas: 
-      "time streak motiv task"
-      "weekly weekly weekly weekly"
-      "tracker tracker tracker tracker";
-  }
-}
-
-@media (max-width: 768px) {
-  .bento-grid {
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas: 
-      "time streak"
-      "motiv task"
+      "time pet"
+      "achiev task"
       "weekly weekly"
       "tracker tracker";
   }
-  .progress-dashboard { padding: 20px 15px; }
 }
 
-/* 9. RECHARTS DARK MODE OVERRIDES */
-body[data-theme="dark"] .recharts-cartesian-grid-horizontal line,
-body[data-theme="dark"] .recharts-cartesian-grid-vertical line {
-  stroke: var(--pg-border);
-  opacity: 0.1;
+/* Small Tablet / Large Mobile (768px and below) */
+@media (max-width: 768px) {
+  .bento-grid {
+    gap: 16px;
+  }
+  
+  .weekly-chart {
+    min-height: 300px;
+  }
 }
 
-body[data-theme="dark"] .recharts-text {
-  fill: var(--pg-muted) !important;
+/* Mobile Layout (650px and below) */
+@media (max-width: 650px) {
+  .progress-dashboard {
+    padding: 20px 12px;
+  }
+  
+  .bento-grid {
+    display: flex;
+    flex-direction: column; /* Stack vertically for easy scrolling */
+    gap: 16px;
+  }
+
+  .card {
+    grid-area: auto !important;
+    padding: 20px;
+  }
+
+  
+  .pet-visual-wrapper {
+    font-size: 3rem;
+  }
+
+  .weekly-chart {
+    min-height: 280px;
+  }
+}
+
+/* DARK THEME SUPPORT */
+body[data-theme="dark"] .progress-dashboard {
+  --pg-bg: #0f172a;
+  --pg-card: #1e293b;
+  --pg-text: #f8fafc;
+  --pg-muted: #94a3b8;
+  --pg-border: #334155;
+  --pg-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
