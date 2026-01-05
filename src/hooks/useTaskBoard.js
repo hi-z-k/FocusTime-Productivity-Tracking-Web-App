@@ -1,50 +1,46 @@
-import { useState, useEffect } from "react";
-import { 
-  addTask as fbAddTask, 
-  syncTasks, 
-  updateTask as fbUpdateTask, 
+import { useState, useEffect, useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
+// Import the Firebase functions from your service file
+import {
+  addTask as fbAddTask,
+  syncTasks,
+  updateTask as fbUpdateTask,
   deleteTask as fbDeleteTask,
-  addStageToDb,
-  syncStages,
-  deleteStageFromDb 
 } from "../services/firebase/taskService";
 
 export function useTaskBoard() {
   const [tasks, setTasks] = useState([]);
-  const [stages, setStages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [stages] = useState(["To-Do", "In Progress", "Done"]);
+  const [saving, setSaving] = useState({});
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    // Sync Tasks
-    const unsubscribeTasks = syncTasks((downloadedTasks) => {
-      setTasks(downloadedTasks);
+    if (!user?.uid) return;
+    const unsubscribe = syncTasks(user.uid, (downloadedTasks) => {
+      const sorted = [...(downloadedTasks || [])].sort((a, b) => {
+        const ta = a?.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const tb = b?.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return tb - ta;
+      });
+      setTasks(sorted);
     });
-
-    // Sync Stages (Columns)
-    const unsubscribeStages = syncStages((downloadedStages) => {
-      if (downloadedStages.length === 0) {
-        setStages(["To-Do", "In Progress", "Done"]);
-      } else {
-        setStages(downloadedStages.map(s => s.name));
-      }
-      setLoading(false);
-    });
-
-    return () => {
-      unsubscribeTasks();
-      unsubscribeStages();
-    };
-  }, []);
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   const addTask = async (taskData) => {
     try {
-      const defaultStatus = stages[0] || "To-Do";
-      await fbAddTask({
+      console.log("Hook: addTask called with", taskData, "userId:", user?.uid);
+      await fbAddTask(user?.uid, {
         ...taskData,
-        status: defaultStatus 
+        status: "todo",
+        completed: false,
       });
+      console.log("Hook: addTask success");
+      // NO local state update here. We rely on syncTasks to update "tasks" state.
     } catch (error) {
       console.error("Hook: Failed to add task:", error);
+      alert("Error adding task. Check your console.");
+      throw error; // Let the UI know it failed
     }
   };
 
@@ -69,7 +65,9 @@ export function useTaskBoard() {
 
   const moveTask = async (taskId, newStage) => {
     try {
-      await fbUpdateTask(taskId, { status: newStage });
+      console.log(`Hook: moveTask called for ${taskId} to ${newStage}`);
+      await fbUpdateTask(user?.uid, taskId, { status: newStage });
+      console.log("Hook: moveTask success");
     } catch (error) {
       console.error("Hook: Failed to move task:", error);
     }
@@ -77,7 +75,9 @@ export function useTaskBoard() {
 
   const deleteTask = async (taskId) => {
     try {
-      await fbDeleteTask(taskId);
+      console.log(`Hook: deleteTask called for ${taskId}`);
+      await fbDeleteTask(user?.uid, taskId);
+      console.log("Hook: deleteTask success");
     } catch (error) {
       console.error("Hook: Failed to delete task:", error);
     }
@@ -85,35 +85,54 @@ export function useTaskBoard() {
 
   const editTask = async (taskId, updateData) => {
     try {
-      await fbUpdateTask(taskId, updateData);
+      console.log(`Hook: editTask called for ${taskId}`, updateData);
+      await fbUpdateTask(user?.uid, taskId, updateData);
+      console.log("Hook: editTask success");
     } catch (error) {
       console.error("Hook: Failed to edit task:", error);
     }
   };
 
-  const unsubscribeStages = syncStages((downloadedStages) => {
-  const defaultStages = ["To-Do", "In Progress", "Done"];
-  
-  // Extract custom names from Firestore
-  const customStages = downloadedStages.map(s => s.name);
-  
-  // Combine them: Defaults first, then custom ones
-  // Set allows us to avoid duplicates if "To-Do" is also in the DB
-  const combinedStages = [...new Set([...defaultStages, ...customStages])];
-  
-  setStages(combinedStages);
-  setLoading(false);
-});
+  // Checkbox handler: optimistic status update for snappy UI
+  const updateTaskStatus = async (taskId, newStatus) => {
+    const prev = tasks.find((t) => t.id === taskId)?.status;
+    setSaving((s) => ({ ...s, [taskId]: true }));
+    setTasks((ts) =>
+      ts.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+    );
+    try {
+      console.log(`Hook: updateTaskStatus ${taskId} -> ${newStatus}`);
+      await fbUpdateTask(user?.uid, taskId, { status: newStatus });
+      console.log("Hook: updateTaskStatus success");
+    } catch (error) {
+      console.error("Hook: Failed to update task status:", error);
+      setTasks((ts) =>
+        ts.map((t) => (t.id === taskId ? { ...t, status: prev } : t))
+      );
+    } finally {
+      setSaving((s) => {
+        const next = { ...s };
+        delete next[taskId];
+        return next;
+      });
+    }
+  };
+
+  // Placeholder functions for stages if you haven't moved them to Firebase yet
+  const addStage = (name) => console.log("Add stage logic needed for Firebase");
+  const removeStage = (name) =>
+    console.log("Remove stage logic needed for Firebase");
 
   return {
     tasks,
     stages,
-    loading,
+    saving,
     addTask,
     editTask,
     deleteTask,
     moveTask,
     addStage,
     removeStage,
+    updateTaskStatus,
   };
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 // src/features/tasks/TaskBoard.jsx
 import { useTaskBoard } from "../../hooks/useTaskBoard"; // Point to the Firebase version
 import TaskCard from "./TaskCard";
@@ -15,10 +15,14 @@ export default function TaskBoard() {
   const {
     tasks,
     stages,
+    loading,
+    error: hookError,
+    saving,
     addTask,
     editTask,
     deleteTask,
     moveTask,
+    updateTaskStatus,
     addStage,
     removeStage,
   } = useTaskBoard();
@@ -26,30 +30,67 @@ export default function TaskBoard() {
   // Form states
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDesc, setNewTaskDesc] = useState("");
-  const [newTaskType, setNewTaskType] = useState("task");
+  const [newTaskType, setNewTaskType] = useState("general");
   const [newTaskDate, setNewTaskDate] = useState("");
   const [editingTask, setEditingTask] = useState(null);
+
+  // UI States
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uiError, setUiError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState("");
 
   //New state for adding Stage
   const [newStageName, setNewStageName] = useState("");
   const [deletingStage, setDeletingStage] = useState(null);
 
-  const mainTasks = tasks.filter((t) => t.type === "task");
+  // Clear messages after 3 seconds
+  useEffect(() => {
+    if (successMsg || uiError || hookError) {
+      const timer = setTimeout(() => {
+        setSuccessMsg("");
+        setUiError(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMsg, uiError, hookError]);
+
+  const STAGES = [
+    { code: "todo", label: "To-Do" },
+    { code: "in-progress", label: "In Progress" },
+    { code: "done", label: "Done" },
+  ];
+
+  const mainTasks = tasks.filter((t) => t.type === "general");
   const assignmentTasks = tasks.filter((t) => t.type === "assignment");
   const examTasks = tasks.filter((t) => t.type === "exam");
 
   const handleAddTask = async () => {
-    if (!newTaskTitle.trim()) return;
-    await addTask({
-      title: newTaskTitle,
-      description: newTaskDesc,
-      type: newTaskType,
-      dueDate: newTaskDate,
-    });
-    setNewTaskTitle("");
-    setNewTaskDesc("");
-    setNewTaskType("task");
-    setNewTaskDate("");
+    if (!newTaskTitle.trim()) {
+      setUiError("Task title is required!");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setUiError(null);
+
+    try {
+      await addTask({
+        title: newTaskTitle,
+        description: newTaskDesc,
+        type: newTaskType,
+        dueDate: newTaskDate,
+      });
+      setNewTaskTitle("");
+      setNewTaskDesc("");
+      setNewTaskType("general");
+      setNewTaskDate("");
+      console.log("UI: Task creation flow completed. Awaiting Firestore sync for UI update.");
+    } catch (err) {
+      // Error is handled by hook but we can show local error if needed
+      setUiError("Failed to add task.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddStage = () => {
@@ -62,9 +103,9 @@ export default function TaskBoard() {
     }
   };
 
-  const handleDrop = (e, stage) => {
+  const handleDrop = (e, stageCode) => {
     const taskId = e.dataTransfer.getData("taskId");
-    moveTask(taskId, stage);
+    moveTask(taskId, stageCode);
   };
 
   const handleSaveEdit = (e) => {
@@ -79,8 +120,30 @@ export default function TaskBoard() {
     setEditingTask(null);
   };
 
+  if (loading) {
+    return (
+      <div className="dashboard-layout">
+        <div className="loading-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <h2>Loading tasks...</h2>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-layout">
+      {/* Feedback Banner */}
+      {(successMsg || uiError || hookError) && (
+        <div className={`fp-banner ${uiError || hookError ? "error" : "success"}`} style={{
+          position: 'fixed', top: '20px', right: '20px', padding: '10px 20px',
+          backgroundColor: (uiError || hookError) ? '#ffdddd' : '#ddffdd',
+          color: (uiError || hookError) ? '#d8000c' : '#4f8a10',
+          borderRadius: '4px', zIndex: 1000, boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+        }}>
+          {uiError || hookError || successMsg}
+        </div>
+      )}
+
       <main className="taskboard-main">
         <section className="main-todo-card">
           <div className="page-container">
@@ -94,13 +157,15 @@ export default function TaskBoard() {
                   placeholder="Task Title"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
+                  disabled={isSubmitting}
                 />
                 <select
                   className="form-select flex-1"
                   value={newTaskType}
                   onChange={(e) => setNewTaskType(e.target.value)}
+                  disabled={isSubmitting}
                 >
-                  <option value="task">General Task</option>
+                  <option value="general">General</option>
                   <option value="assignment">Assignment</option>
                   <option value="exam">Exam</option>
                 </select>
@@ -112,17 +177,22 @@ export default function TaskBoard() {
                   className="form-input flex-1"
                   value={newTaskDate}
                   onChange={(e) => setNewTaskDate(e.target.value)}
+                  disabled={isSubmitting}
                 />
                 <input
                   className="form-input flex-2"
                   placeholder="Description"
                   value={newTaskDesc}
                   onChange={(e) => setNewTaskDesc(e.target.value)}
+                  disabled={isSubmitting}
                 />
               </div>
-              <button className="btn btn-primary" onClick={handleAddTask}>
-                create{" "}
-                {newTaskType.charAt(0).toUpperCase() + newTaskType.slice(1)}
+              <button 
+                className="btn btn-primary" 
+                onClick={handleAddTask}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Creating..." : `Create ${newTaskType.charAt(0).toUpperCase() + newTaskType.slice(1)}`}
               </button>
             </div>
             {/* Add New Stage Control */}
@@ -140,19 +210,19 @@ export default function TaskBoard() {
             </div>
             {/*Kanban Columns*/}
             <div className="task-board-container">
-              {stages.map((stage) => (
+              {STAGES.map((stage) => (
                 <div
-                  key={stage}
+                  key={stage.code}
                   className="kanban-column"
                   onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, stage)}
+                  onDrop={(e) => handleDrop(e, stage.code)}
                 >
                   <div className="kanban-header">
-                    <h3 style={{ margin: 0 }}>{stage}</h3>
-                    {!["To-Do", "In Progress", "Done"].includes(stage) && (
+                    <h3 style={{ margin: 0 }}>{stage.label}</h3>
+                    {!["To-Do", "In Progress", "Done"].includes(stage.label) && (
                       <button
                         onClick={() => {
-                          setDeletingStage(stage);
+                          setDeletingStage(stage.label);
                         }}
                         className="delete-column-btn"
                         title="Delete Column"
@@ -162,7 +232,11 @@ export default function TaskBoard() {
                     )}
                   </div>
                   {mainTasks
-                    .filter((task) => task.status === stage)
+                    .filter(
+                      (task) =>
+                        task.status === stage.code ||
+                        task.status === stage.label
+                    )
                     .map((task) => (
                       <TaskCard
                         key={task.id}
@@ -170,6 +244,8 @@ export default function TaskBoard() {
                         onEdit={setEditingTask}
                         onDelete={deleteTask}
                         onMove={moveTask}
+                        onStatusChange={updateTaskStatus}
+                        isSaving={!!saving?.[task.id]}
                         stages={stages}
                       />
                     ))}
@@ -181,35 +257,39 @@ export default function TaskBoard() {
         <div className="bottom-sections-grid">
           <div className="side-card">
             <h3>📘 Assignments</h3>
-            <div className="side-list">
-              {assignmentTasks.map((t) => (
-                <TaskCard
-                  key={t.id}
-                  task={t}
-                  onEdit={setEditingTask}
-                  onDelete={deleteTask}
-                  onMove={moveTask}
-                  stages={stages}
-                />
-              ))}
+              <div className="side-list">
+                {assignmentTasks.map((t) => (
+                  <TaskCard
+                    key={t.id}
+                    task={t}
+                    onEdit={setEditingTask}
+                    onDelete={deleteTask}
+                    onMove={moveTask}
+                    onStatusChange={updateTaskStatus}
+                    isSaving={!!saving?.[t.id]}
+                    stages={stages}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
 
           <div className="side-card">
             <h3>📝 Upcoming Exams</h3>
-            <div className="side-list">
-              {examTasks.map((t) => (
-                <TaskCard
-                  key={t.id}
-                  task={t}
-                  onEdit={setEditingTask}
-                  onDelete={deleteTask}
-                  onMove={moveTask}
-                  stages={stages}
-                />
-              ))}
+              <div className="side-list">
+                {examTasks.map((t) => (
+                  <TaskCard
+                    key={t.id}
+                    task={t}
+                    onEdit={setEditingTask}
+                    onDelete={deleteTask}
+                    onMove={moveTask}
+                    onStatusChange={updateTaskStatus}
+                    isSaving={!!saving?.[t.id]}
+                    stages={stages}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
         </div>
 
         {editingTask && (
