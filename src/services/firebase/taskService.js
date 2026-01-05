@@ -1,29 +1,47 @@
 import { database } from "./firebaseConfig";
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  query,
+  orderBy,
+  where,
+  serverTimestamp,
+} from "firebase/firestore";
 
-// Function to add a task to Firestore
-export const addTask = async (taskData) => {
-  return await addDoc(collection(database, "tasks"), {
+const tasksCollection = collection(database, "task");
+
+export const addTask = async (userId, taskData) => {
+  if (!userId) throw new Error("addTask: Missing userId");
+  const payload = {
     ...taskData,
-    createdAt: new Date()
-  });
+    userId,
+    createdAt: serverTimestamp(),
+  };
+  const ref = await addDoc(tasksCollection, payload);
+  return ref;
 };
 
-// Function to sync tasks in real-time
-export const syncTasks = (callback) => {
-  const q = query(collection(database, "tasks"), orderBy("createdAt", "desc"));
+export const syncTasks = (userId, callback) => {
+  if (!userId) return () => {};
+  const q = query(tasksCollection, where("userId", "==", userId));
   return onSnapshot(q, (snapshot) => {
-    const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const tasks = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
     callback(tasks);
   });
 };
 
-export const updateTask = async (id, data) => {
-  const taskRef = doc(database, "tasks", id);
+export const updateTask = async (userId, id, data) => {
+  if (!id) throw new Error("updateTask: Missing id");
+  const taskRef = doc(database, "task", id);
   return await updateDoc(taskRef, data);
 };
 
-export const deleteTask = async (id) => {
-  const taskRef = doc(database, "tasks", id);
+export const deleteTask = async (userId, id) => {
+  if (!id) throw new Error("deleteTask: Missing id");
+  const taskRef = doc(database, "task", id);
   return await deleteDoc(taskRef);
 };
