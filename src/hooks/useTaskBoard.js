@@ -14,7 +14,6 @@ export function useTaskBoard() {
   const [saving, setSaving] = useState({});
   const { user } = useContext(AuthContext);
 
-  // 1. REAL-TIME SYNC: This pulls data from the cloud to your screen
   useEffect(() => {
     if (!user?.uid) return;
     const unsubscribe = syncTasks(user.uid, (downloadedTasks) => {
@@ -28,7 +27,6 @@ export function useTaskBoard() {
     return () => unsubscribe();
   }, [user?.uid]);
 
-  // 2. ADD TASK: Sends new data to the cloud
   const addTask = async (taskData) => {
     try {
       console.log("Hook: addTask called with", taskData, "userId:", user?.uid);
@@ -46,7 +44,25 @@ export function useTaskBoard() {
     }
   };
 
-  // 3. MOVE TASK (DRAG & DROP): Updates the status in the cloud
+  const addStage = async (name) => {
+    if (stages.includes(name)) return;
+    try {
+      await addStageToDb(name);
+    } catch (error) {
+      console.error("Hook: Failed to add stage:", error);
+    }
+  };
+
+  // UPDATED: This now triggers the backend deletion
+  const removeStage = async (name) => {
+    try {
+      await deleteStageFromDb(name);
+      console.log("Hook: Stage removed successfully");
+    } catch (error) {
+      console.error("Hook: Failed to remove stage:", error);
+    }
+  };
+
   const moveTask = async (taskId, newStage) => {
     try {
       console.log(`Hook: moveTask called for ${taskId} to ${newStage}`);
@@ -57,7 +73,6 @@ export function useTaskBoard() {
     }
   };
 
-  // 4. DELETE TASK: Removes from cloud
   const deleteTask = async (taskId) => {
     try {
       console.log(`Hook: deleteTask called for ${taskId}`);
@@ -68,7 +83,6 @@ export function useTaskBoard() {
     }
   };
 
-  // 5. EDIT TASK: Updates titles/descriptions in the cloud
   const editTask = async (taskId, updateData) => {
     try {
       console.log(`Hook: editTask called for ${taskId}`, updateData);
