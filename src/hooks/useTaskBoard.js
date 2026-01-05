@@ -1,113 +1,107 @@
+// Main TaskBoard logic and state management (Firebase-backed)
+
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
-// Import the Firebase functions from your service file
+
 import {
   addTask as fbAddTask,
   syncTasks,
   updateTask as fbUpdateTask,
   deleteTask as fbDeleteTask,
+  addStageToDb,
+  deleteStageFromDb,
 } from "../services/firebase/taskService";
 
 export function useTaskBoard() {
+  const { user } = useContext(AuthContext);
+
   const [tasks, setTasks] = useState([]);
   const [stages] = useState(["To-Do", "In Progress", "Done"]);
   const [saving, setSaving] = useState({});
-  const { user } = useContext(AuthContext);
+
+  /* ===================== TASK SYNC ===================== */
 
   useEffect(() => {
     if (!user?.uid) return;
+
     const unsubscribe = syncTasks(user.uid, (downloadedTasks) => {
       const sorted = [...(downloadedTasks || [])].sort((a, b) => {
-        const ta = a?.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-        const tb = b?.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        const ta = a?.createdAt?.toMillis?.() ?? 0;
+        const tb = b?.createdAt?.toMillis?.() ?? 0;
         return tb - ta;
       });
       setTasks(sorted);
     });
+
     return () => unsubscribe();
   }, [user?.uid]);
 
+  /* ===================== TASK ACTIONS ===================== */
+
   const addTask = async (taskData) => {
+    if (!user?.uid) return;
+
     try {
-      console.log("Hook: addTask called with", taskData, "userId:", user?.uid);
-      await fbAddTask(user?.uid, {
+      await fbAddTask(user.uid, {
         ...taskData,
-        status: "todo",
+        status: "To-Do",
         completed: false,
       });
-      console.log("Hook: addTask success");
-      // NO local state update here. We rely on syncTasks to update "tasks" state.
+      // State updates come from syncTasks listener
     } catch (error) {
-      console.error("Hook: Failed to add task:", error);
-      alert("Error adding task. Check your console.");
-      throw error; // Let the UI know it failed
-    }
-  };
-
-  const addStage = async (name) => {
-    if (stages.includes(name)) return;
-    try {
-      await addStageToDb(name);
-    } catch (error) {
-      console.error("Hook: Failed to add stage:", error);
-    }
-  };
-
-  // UPDATED: This now triggers the backend deletion
-  const removeStage = async (name) => {
-    try {
-      await deleteStageFromDb(name);
-      console.log("Hook: Stage removed successfully");
-    } catch (error) {
-      console.error("Hook: Failed to remove stage:", error);
-    }
-  };
-
-  const moveTask = async (taskId, newStage) => {
-    try {
-      console.log(`Hook: moveTask called for ${taskId} to ${newStage}`);
-      await fbUpdateTask(user?.uid, taskId, { status: newStage });
-      console.log("Hook: moveTask success");
-    } catch (error) {
-      console.error("Hook: Failed to move task:", error);
-    }
-  };
-
-  const deleteTask = async (taskId) => {
-    try {
-      console.log(`Hook: deleteTask called for ${taskId}`);
-      await fbDeleteTask(user?.uid, taskId);
-      console.log("Hook: deleteTask success");
-    } catch (error) {
-      console.error("Hook: Failed to delete task:", error);
+      console.error("useTaskBoard: addTask failed", error);
+      throw error;
     }
   };
 
   const editTask = async (taskId, updateData) => {
+    if (!user?.uid || !taskId) return;
+
     try {
-      console.log(`Hook: editTask called for ${taskId}`, updateData);
-      await fbUpdateTask(user?.uid, taskId, updateData);
-      console.log("Hook: editTask success");
+      await fbUpdateTask(user.uid, taskId, updateData);
     } catch (error) {
-      console.error("Hook: Failed to edit task:", error);
+      console.error("useTaskBoard: editTask failed", error);
     }
   };
 
-  // Checkbox handler: optimistic status update for snappy UI
+  const deleteTask = async (taskId) => {
+    if (!user?.uid || !taskId) return;
+
+    try {
+      await fbDeleteTask(user.uid, taskId);
+    } catch (error) {
+      console.error("useTaskBoard: deleteTask failed", error);
+    }
+  };
+
+  const moveTask = async (taskId, newStage) => {
+    if (!user?.uid || !taskId) return;
+
+    try {
+      await fbUpdateTask(user.uid, taskId, { status: newStage });
+    } catch (error) {
+      console.error("useTaskBoard: moveTask failed", error);
+    }
+  };
+
+  /* ===================== OPTIMISTIC STATUS UPDATE ===================== */
+
   const updateTaskStatus = async (taskId, newStatus) => {
-    const prev = tasks.find((t) => t.id === taskId)?.status;
+    if (!user?.uid || !taskId) return;
+
+    const previous = tasks.find((t) => t.id === taskId)?.status;
+
     setSaving((s) => ({ ...s, [taskId]: true }));
     setTasks((ts) =>
       ts.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
     );
+
     try {
-      console.log(`Hook: updateTaskStatus ${taskId} -> ${newStatus}`);
-      await fbUpdateTask(user?.uid, taskId, { status: newStatus });
-      console.log("Hook: updateTaskStatus success");
+      await fbUpdateTask(user.uid, taskId, { status: newStatus });
     } catch (error) {
-      console.error("Hook: Failed to update task status:", error);
+      console.error("useTaskBoard: updateTaskStatus failed", error);
       setTasks((ts) =>
-        ts.map((t) => (t.id === taskId ? { ...t, status: prev } : t))
+        ts.map((t) => (t.id === taskId ? { ...t, status: previous } : t))
       );
     } finally {
       setSaving((s) => {
@@ -118,10 +112,29 @@ export function useTaskBoard() {
     }
   };
 
-  // Placeholder functions for stages if you haven't moved them to Firebase yet
-  const addStage = (name) => console.log("Add stage logic needed for Firebase");
-  const removeStage = (name) =>
-    console.log("Remove stage logic needed for Firebase");
+  /* ===================== STAGE ACTIONS ===================== */
+
+  const addStage = async (stageName) => {
+    if (!stageName) return;
+
+    try {
+      await addStageToDb(stageName);
+    } catch (error) {
+      console.error("useTaskBoard: addStage failed", error);
+    }
+  };
+
+  const removeStage = async (stageName) => {
+    if (!stageName) return;
+
+    try {
+      await deleteStageFromDb(stageName);
+    } catch (error) {
+      console.error("useTaskBoard: removeStage failed", error);
+    }
+  };
+
+  /* ===================== PUBLIC API ===================== */
 
   return {
     tasks,
@@ -131,8 +144,8 @@ export function useTaskBoard() {
     editTask,
     deleteTask,
     moveTask,
+    updateTaskStatus,
     addStage,
     removeStage,
-    updateTaskStatus,
   };
 }
