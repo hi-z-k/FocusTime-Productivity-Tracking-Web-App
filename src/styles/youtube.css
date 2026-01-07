@@ -113,6 +113,36 @@
   margin: 50px auto;
 }
 
+.yt-player-view {
+  max-width: 1000px; 
+  margin: 0 auto;
+  padding: 20px;
+}
+
+
+.video-responsive {
+  overflow: hidden;
+  padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+  position: relative;
+  height: 0;
+  border-radius: 12px; 
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.video-responsive iframe {
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+}
+
+
+.yt-player-info h2 {
+  font-size: 1.8rem;
+  margin-top: 20px;
+}
+
 .warning-icon { font-size: 3rem; display: block; margin-bottom: 10px; }
 
 /* --- Responsive --- */
