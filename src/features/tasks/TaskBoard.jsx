@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-// src/features/tasks/TaskBoard.jsx
 import { useTaskBoard } from "../../hooks/useTaskBoard"; 
 import TaskCard from "./TaskCard";
 
@@ -36,10 +35,7 @@ export default function TaskBoard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uiError, setUiError] = useState(null);
   const [successMsg, setSuccessMsg] = useState("");
-
-  //New state for adding Stage
   const [newStageName, setNewStageName] = useState("");
-  const [deletingStage, setDeletingStage] = useState(null);
 
   // Clear messages after 3 seconds
   useEffect(() => {
@@ -52,37 +48,24 @@ export default function TaskBoard() {
     }
   }, [successMsg, uiError, hookError]);
 
-  const STAGES = [
-    { code: "todo", label: "To-Do" },
-    { code: "in-progress", label: "In Progress" },
-    { code: "done", label: "Done" },
-  ];
-
   const mainTasks = tasks.filter((t) => t.type === "general");
   const assignmentTasks = tasks.filter((t) => t.type === "assignment");
   const examTasks = tasks.filter((t) => t.type === "exam");
 
-  // --- UPDATED LOGIC HERE ---
   const handleToggleComplete = async (taskId, currentStatus) => {
     const isNowCompleted = !currentStatus;
-    
     await editTask(taskId, { 
       completed: isNowCompleted,
-      // If checked, move to "Done". If unchecked, move back to "To-Do"
       status: isNowCompleted ? "Done" : "To-Do" 
     });
   };
-  // --------------------------
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) {
       setUiError("Task title is required!");
       return;
     }
-
     setIsSubmitting(true);
-    setUiError(null);
-
     try {
       await addTask({
         title: newTaskTitle,
@@ -94,9 +77,7 @@ export default function TaskBoard() {
       setNewTaskDesc("");
       setNewTaskType("general");
       setNewTaskDate("");
-      console.log("UI: Task creation flow completed. Awaiting Firestore sync for UI update.");
     } catch (err) {
-      // Error is handled by hook but we can show local error if needed
       setUiError("Failed to add task.");
     } finally {
       setIsSubmitting(false);
@@ -105,15 +86,13 @@ export default function TaskBoard() {
 
   const handleAddStage = () => {
     if (!newStageName.trim()) return;
-    if (addStage) {
-      addStage(newStageName);
-      setNewStageName("");
-    }
+    addStage(newStageName);
+    setNewStageName("");
   };
 
-  const handleDrop = (e, stageCode) => {
+  const handleDrop = (e, stageName) => {
     const taskId = e.dataTransfer.getData("taskId");
-    moveTask(taskId, stageCode);
+    moveTask(taskId, stageName);
   };
 
   const handleSaveEdit = (e) => {
@@ -132,7 +111,7 @@ export default function TaskBoard() {
     return (
       <div className="dashboard-layout">
         <div className="loading-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-          <h2>Loading tasks...</h2>
+          <h2>Loading task board...</h2>
         </div>
       </div>
     );
@@ -194,17 +173,13 @@ export default function TaskBoard() {
                   disabled={isSubmitting}
                 />
               </div>
-              <button 
-                className="btn btn-primary" 
-                onClick={handleAddTask}
-                disabled={isSubmitting}
-              >
+              <button className="btn btn-primary" onClick={handleAddTask} disabled={isSubmitting}>
                 {isSubmitting ? "Creating..." : `Create ${newTaskType.charAt(0).toUpperCase() + newTaskType.slice(1)}`}
               </button>
             </div>
 
             {/* Add New Stage Control */}
-            <div className="add-stage-row">
+            <div className="add-stage-row" style={{ marginTop: '20px', marginBottom: '20px', display: 'flex', gap: '10px' }}>
               <input
                 className="form-input"
                 placeholder="New Column Name..."
@@ -212,98 +187,87 @@ export default function TaskBoard() {
                 onChange={(e) => setNewStageName(e.target.value)}
                 style={{ maxWidth: "250px" }}
               />
-              <button className="btn btn-primary" onClick={handleAddStage}>
-                + Add Column
-              </button>
+              <button className="btn btn-primary" onClick={handleAddStage}>+ Add Column</button>
             </div>
 
-            {/* Kanban Columns */}
-            <div className="task-board-container">
-              {STAGES.map((stage) => (
+            {/* Kanban Columns (Fixed Size & Dynamic) */}
+            <div className="task-board-container" style={{ 
+              display: 'flex', 
+              gap: '20px', 
+              overflowX: 'auto', 
+              paddingBottom: '20px',
+              alignItems: 'flex-start' 
+            }}>
+              {stages.map((stageName) => (
                 <div
-                  key={stage.code}
+                  key={stageName}
                   className="kanban-column"
                   onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, stage.code)}
+                  onDrop={(e) => handleDrop(e, stageName)}
+                  style={{ 
+                    flex: '0 0 300px', // Standard Column Width
+                    minWidth: '300px',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '8px',
+                    padding: '15px'
+                  }}
                 >
-                  <div className="kanban-header">
-                    <h3 style={{ margin: 0 }}>{stage.label}</h3>
-                    {!["To-Do", "In Progress", "Done"].includes(stage.label) && (
+                  <div className="kanban-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                    <h3 style={{ margin: 0 }}>{stageName}</h3>
+                    {!["To-Do", "In Progress", "Done"].includes(stageName) && (
                       <button
-                        onClick={() => {
-                          setDeletingStage(stage.label);
-                        }}
+                        onClick={() => window.confirm(`Delete "${stageName}" column?`) && removeStage(stageName)}
                         className="delete-column-btn"
+                        style={{ background: 'none', border: 'none', color: 'red', cursor: 'pointer', fontSize: '1.2rem' }}
                       >
                         &times;
                       </button>
                     )}
                   </div>
-                  {mainTasks
-                    .filter(
-                      (task) =>
-                        task.status === stage.code ||
-                        task.status === stage.label
-                    )
-                    .map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onEdit={setEditingTask}
-                        onDelete={deleteTask}
-                        onMove={moveTask}
-                        onStatusChange={updateTaskStatus}
-                        isSaving={!!saving?.[task.id]}
-                        stages={stages}
-                        onToggleComplete={() => handleToggleComplete(task.id, task.completed)}
-                      />
-                    ))}
+                  <div className="task-list" style={{ minHeight: '100px' }}>
+                    {mainTasks
+                      .filter((task) => task.status === stageName)
+                      .map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          onEdit={setEditingTask}
+                          onDelete={deleteTask}
+                          onMove={moveTask}
+                          onStatusChange={updateTaskStatus}
+                          isSaving={!!saving?.[task.id]}
+                          stages={stages}
+                          onToggleComplete={() => handleToggleComplete(task.id, task.completed)}
+                        />
+                      ))}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Bottom Grid */}
+        {/* Assignments & Exams Grid */}
         <div className="bottom-sections-grid">
           <div className="side-card">
             <h3>📘 Assignments</h3>
-              <div className="side-list">
-                {assignmentTasks.map((t) => (
-                  <TaskCard
-                    key={t.id}
-                    task={t}
-                    onEdit={setEditingTask}
-                    onDelete={deleteTask}
-                    onMove={moveTask}
-                    onStatusChange={updateTaskStatus}
-                    isSaving={!!saving?.[t.id]}
-                    stages={stages}
-                  />
-                ))}
-              </div>
+            <div className="side-list">
+              {assignmentTasks.map((t) => (
+                <TaskCard key={t.id} task={t} onEdit={setEditingTask} onDelete={deleteTask} onMove={moveTask} onStatusChange={updateTaskStatus} isSaving={!!saving?.[t.id]} stages={stages} />
+              ))}
             </div>
-
+          </div>
           <div className="side-card">
             <h3>📝 Upcoming Exams</h3>
-              <div className="side-list">
-                {examTasks.map((t) => (
-                  <TaskCard
-                    key={t.id}
-                    task={t}
-                    onEdit={setEditingTask}
-                    onDelete={deleteTask}
-                    onMove={moveTask}
-                    onStatusChange={updateTaskStatus}
-                    isSaving={!!saving?.[t.id]}
-                    stages={stages}
-                  />
-                ))}
-              </div>
+            <div className="side-list">
+              {examTasks.map((t) => (
+                <TaskCard key={t.id} task={t} onEdit={setEditingTask} onDelete={deleteTask} onMove={moveTask} onStatusChange={updateTaskStatus} isSaving={!!saving?.[t.id]} stages={stages} />
+              ))}
             </div>
+          </div>
         </div>
 
-        {/* Modal Logic remains the same... */}
+        {/* Edit Modal */}
         {editingTask && (
           <div className="modal-overlay" onClick={() => setEditingTask(null)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
