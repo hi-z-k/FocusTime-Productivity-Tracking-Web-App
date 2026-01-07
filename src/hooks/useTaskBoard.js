@@ -1,14 +1,12 @@
-// Main TaskBoard logic and state management (Firebase-backed)
-
 import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
-
 import {
   addTask as fbAddTask,
   syncTasks,
   updateTask as fbUpdateTask,
   deleteTask as fbDeleteTask,
   addStageToDb,
+  syncStages,
   deleteStageFromDb,
 } from "../services/firebase/taskService";
 
@@ -16,11 +14,12 @@ export function useTaskBoard() {
   const { user } = useContext(AuthContext);
 
   const [tasks, setTasks] = useState([]);
-  const [stages] = useState(["To-Do", "In Progress", "Done"]);
+  // Initialize with core stages so they appear immediately
+  const [stages, setStages] = useState(["To-Do", "In Progress", "Done"]);
   const [saving, setSaving] = useState({});
+  const [loading, setLoading] = useState(true);
 
   /* ===================== TASK SYNC ===================== */
-
   useEffect(() => {
     if (!user?.uid) return;
 
@@ -36,18 +35,34 @@ export function useTaskBoard() {
     return () => unsubscribe();
   }, [user?.uid]);
 
-  /* ===================== TASK ACTIONS ===================== */
-
-  const addTask = async (taskData) => {
+  /* ===================== STAGE SYNC (The Missing Link) ===================== */
+  useEffect(() => {
     if (!user?.uid) return;
 
+    // Listen for changes in the 'stages' collection in Firestore
+    const unsubscribe = syncStages((downloadedStages) => {
+      const coreStages = ["To-Do", "In Progress", "Done"];
+      const customStages = downloadedStages.map((s) => s.name);
+      
+      // Combine core + custom and remove duplicates
+      const finalStages = [...new Set([...coreStages, ...customStages])];
+      
+      setStages(finalStages);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
+
+  /* ===================== TASK ACTIONS ===================== */
+  const addTask = async (taskData) => {
+    if (!user?.uid) return;
     try {
       await fbAddTask(user.uid, {
         ...taskData,
         status: "To-Do",
         completed: false,
       });
-      // State updates come from syncTasks listener
     } catch (error) {
       console.error("useTaskBoard: addTask failed", error);
       throw error;
@@ -56,7 +71,6 @@ export function useTaskBoard() {
 
   const editTask = async (taskId, updateData) => {
     if (!user?.uid || !taskId) return;
-
     try {
       await fbUpdateTask(user.uid, taskId, updateData);
     } catch (error) {
@@ -66,7 +80,6 @@ export function useTaskBoard() {
 
   const deleteTask = async (taskId) => {
     if (!user?.uid || !taskId) return;
-
     try {
       await fbDeleteTask(user.uid, taskId);
     } catch (error) {
@@ -76,7 +89,6 @@ export function useTaskBoard() {
 
   const moveTask = async (taskId, newStage) => {
     if (!user?.uid || !taskId) return;
-
     try {
       await fbUpdateTask(user.uid, taskId, { status: newStage });
     } catch (error) {
@@ -84,40 +96,11 @@ export function useTaskBoard() {
     }
   };
 
-  /* ===================== OPTIMISTIC STATUS UPDATE ===================== */
-
-  const updateTaskStatus = async (taskId, newStatus) => {
-    if (!user?.uid || !taskId) return;
-
-    const previous = tasks.find((t) => t.id === taskId)?.status;
-
-    setSaving((s) => ({ ...s, [taskId]: true }));
-    setTasks((ts) =>
-      ts.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
-    );
-
-    try {
-      await fbUpdateTask(user.uid, taskId, { status: newStatus });
-    } catch (error) {
-      console.error("useTaskBoard: updateTaskStatus failed", error);
-      setTasks((ts) =>
-        ts.map((t) => (t.id === taskId ? { ...t, status: previous } : t))
-      );
-    } finally {
-      setSaving((s) => {
-        const next = { ...s };
-        delete next[taskId];
-        return next;
-      });
-    }
-  };
-
   /* ===================== STAGE ACTIONS ===================== */
-
   const addStage = async (stageName) => {
-    if (!stageName) return;
-
+    if (!stageName || stages.includes(stageName)) return;
     try {
+      // Backend write
       await addStageToDb(stageName);
     } catch (error) {
       console.error("useTaskBoard: addStage failed", error);
@@ -126,8 +109,8 @@ export function useTaskBoard() {
 
   const removeStage = async (stageName) => {
     if (!stageName) return;
-
     try {
+      // Backend delete
       await deleteStageFromDb(stageName);
     } catch (error) {
       console.error("useTaskBoard: removeStage failed", error);
@@ -135,16 +118,15 @@ export function useTaskBoard() {
   };
 
   /* ===================== PUBLIC API ===================== */
-
   return {
     tasks,
     stages,
     saving,
+    loading,
     addTask,
     editTask,
     deleteTask,
     moveTask,
-    updateTaskStatus,
     addStage,
     removeStage,
   };

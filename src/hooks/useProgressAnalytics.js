@@ -1,13 +1,66 @@
-import { useState, useEffect } from "react";
-import { useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { syncUserProgress } from "../services/progressService";
 import { database } from "../services/firebase/firebaseConfig";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, getDocs, orderBy } from "firebase/firestore";
+// Import the gamification logic functions
+import { getMilestones } from "../services/gamificationLogic";
+
+// --- HELPERS ---
+
+/**
+ * Merges historical session documents with the live 'hoursSpent' for today's bar.
+ */
+const calculateWeeklyData = (sessions, currentTotalHours) => {
+  const days = ["S", "M", "T", "W", "T", "F", "S"];
+  const weekData = days.map(day => ({ day, value: 0 }));
+
+  const now = new Date();
+  const todayIndex = now.getDay(); 
+  const todayString = now.toDateString();
+
+  // 1. Fill in historical data from the sessions sub-collection
+  sessions.forEach(session => {
+    if (!session.timestamp) return;
+    
+    const sessionDate = session.timestamp.toDate();
+    const dayIndex = sessionDate.getDay();
+    
+    // Ignore sessions from 'today' to avoid double-counting with currentTotalHours
+    if (sessionDate.toDateString() !== todayString) {
+      weekData[dayIndex].value += (session.duration / 3600);
+    }
+  });
+
+  // 2. Set TODAY'S bar directly to the live 'hoursSpent' field
+  weekData[todayIndex].value = currentTotalHours || 0;
+
+  // Reorder to start from Monday [M, T, W, T, F, S, S]
+  return [...weekData.slice(1), weekData[0]];
+};
+
+const fetchTaskData = async (analyticsData) => {
+  try {
+    const q = query(collection(database, "tasks"), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    const tasks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    analyticsData.totalTasks = tasks.length;
+    analyticsData.completedTasks = tasks.filter(
+      t => t.status === "Done" || t.completed === true
+    ).length;
+
+    return analyticsData;
+  } catch (err) {
+    console.error("Task Fetch Error:", err);
+    return analyticsData;
+  }
+};
+
+// --- THE HOOK ---
 
 export const useProgressAnalytics = () => {
   const { user } = useContext(AuthContext);
-
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,122 +71,52 @@ export const useProgressAnalytics = () => {
       return;
     }
 
-    let unsubscribeProgress = null;
     let isMounted = true;
+    let unsubscribeProgress = null;
 
     const fetchAnalytics = async () => {
       try {
         setLoading(true);
-        setError(null);
 
-        const analyticsData = {
-          hoursSpent: 0,
-          dailyGoal: 8,
-          streak: 0,
-          completedTasks: 0,
-          totalTasks: 0,
-          weeklyData: [
-            { day: "M", value: 0 },
-            { day: "T", value: 0 },
-            { day: "W", value: 0 },
-            { day: "T", value: 0 },
-            { day: "F", value: 0 },
-            { day: "S", value: 0 },
-            { day: "S", value: 0 },
-          ],
-          assignments: [],
-          achievements: [],
-        };
-
-        unsubscribeProgress = syncUserProgress(user.uid, (progressData) => {
+        const historyRef = collection(database, "users", user.uid, "sessions");
+        const historyQuery = query(historyRef, orderBy("timestamp", "desc"));
+        
+        // Setup real-time listener for userStats (hoursSpent, dailyGoal, streak)
+        unsubscribeProgress = syncUserProgress(user.uid, async (progressData) => {
           if (!isMounted) return;
 
-          if (progressData) {
-            analyticsData.hoursSpent =
-              typeof progressData.hoursSpent === "number"
-                ? progressData.hoursSpent
-                : 0;
+          // Re-fetch historical sessions
+          const historySnapshot = await getDocs(historyQuery);
+          const sessions = historySnapshot.docs.map(doc => doc.data());
 
-            analyticsData.dailyGoal =
-              typeof progressData.dailyGoal === "number"
-                ? progressData.dailyGoal
-                : 8;
+          const currentStreak = progressData.streak || 0;
+          const currentHours = progressData.hoursSpent || 0;
 
-            analyticsData.assignments = Array.isArray(progressData.assignments)
-              ? progressData.assignments
-              : [];
+          let updatedData = {
+            hoursSpent: 0,
+            dailyGoal: 4, 
+            streak: 0,
+            ...progressData,
+            // Generate streak-based milestones from gamificationLogic.js
+            achievements: getMilestones(currentStreak), 
+            // Calculate chart based on manual hoursSpent field
+            weeklyData: calculateWeeklyData(sessions, currentHours),
+            assignments: [],
+          };
 
-            analyticsData.achievements = Array.isArray(
-              progressData.achievements
-            )
-              ? progressData.achievements
-              : [];
-
-            if (
-              progressData.weeklyData &&
-              Array.isArray(progressData.weeklyData)
-            ) {
-              analyticsData.weeklyData = normalizeWeeklyData(
-                progressData.weeklyData
-              );
-            }
+          const finalData = await fetchTaskData(updatedData);
+          
+          if (isMounted) {
+            setData(finalData);
+            setLoading(false);
           }
-
-          fetchSessionData(user.uid, analyticsData).then(
-            async (updatedData) => {
-              if (!isMounted) return;
-
-              const finalData = await fetchTaskData(updatedData);
-              if (!isMounted) return;
-
-              setData({
-                hoursSpent: finalData.hoursSpent || 0,
-                dailyGoal: finalData.dailyGoal || 8,
-                streak: finalData.streak || 0,
-                completedTasks: finalData.completedTasks || 0,
-                totalTasks: finalData.totalTasks || 0,
-                weeklyData: Array.isArray(finalData.weeklyData)
-                  ? finalData.weeklyData
-                  : analyticsData.weeklyData,
-                assignments: Array.isArray(finalData.assignments)
-                  ? finalData.assignments
-                  : [],
-                achievements: Array.isArray(finalData.achievements)
-                  ? finalData.achievements
-                  : [],
-              });
-
-              setLoading(false);
-            }
-          );
         });
       } catch (err) {
-        if (!isMounted) return;
-
-        if (err?.code === "permission-denied" || err?.code === "unavailable") {
-          setError("Unable to load analytics. Please check your connection.");
+        console.error("Analytics Hook Error:", err);
+        if (isMounted) {
+          setError(err.message);
+          setLoading(false);
         }
-
-        setData({
-          hoursSpent: 0,
-          dailyGoal: 8,
-          streak: 0,
-          completedTasks: 0,
-          totalTasks: 0,
-          weeklyData: [
-            { day: "M", value: 0 },
-            { day: "T", value: 0 },
-            { day: "W", value: 0 },
-            { day: "T", value: 0 },
-            { day: "F", value: 0 },
-            { day: "S", value: 0 },
-            { day: "S", value: 0 },
-          ],
-          assignments: [],
-          achievements: [],
-        });
-
-        setLoading(false);
       }
     };
 
@@ -141,205 +124,11 @@ export const useProgressAnalytics = () => {
 
     return () => {
       isMounted = false;
-      if (typeof unsubscribeProgress === "function") {
-        unsubscribeProgress();
-      }
+      if (unsubscribeProgress) unsubscribeProgress();
     };
   }, [user?.uid]);
 
   return { data, loading, error };
-};
-
-/* helpers */
-
-const fetchSessionData = async (userId, analyticsData) => {
-  try {
-    const sessionsRef = collection(database, "users", userId, "sessions");
-
-    let snapshot;
-    let sessions = [];
-    let totalHours = 0;
-
-    try {
-      const q = query(
-        sessionsRef,
-        where("mode", "==", "focus"),
-        where("status", "==", "completed"),
-        orderBy("timestamp", "desc")
-      );
-      snapshot = await getDocs(q);
-    } catch {
-      try {
-        const q = query(sessionsRef, orderBy("timestamp", "desc"));
-        snapshot = await getDocs(q);
-      } catch {
-        snapshot = await getDocs(sessionsRef);
-      }
-    }
-
-    snapshot.forEach((doc) => {
-      const session = { id: doc.id, ...doc.data() };
-
-      if (session.mode === "focus" && session.status === "completed") {
-        sessions.push(session);
-        if (session.duration) {
-          totalHours += session.duration / 3600;
-        }
-      }
-    });
-
-    if (!analyticsData.hoursSpent) {
-      analyticsData.hoursSpent = totalHours;
-    }
-
-    const weeklyData = calculateWeeklyData(sessions);
-    if (weeklyData.some((d) => d.value > 0)) {
-      analyticsData.weeklyData = weeklyData;
-    }
-    // streak calculation based on completed focus session
-    const computedStreak = calculateStreakFromSessions(sessions);
-    if (!analyticsData.streak || analyticsData.streak === 0) {
-      analyticsData.streak = computedStreak;
-    }
-
-    return analyticsData;
-  } catch {
-    return analyticsData;
-  }
-};
-
-const normalizeWeeklyData = (weeklyData) => {
-  const days = ["M", "T", "W", "T", "F", "S", "S"];
-  const normalized = days.map((day) => ({ day, value: 0 }));
-
-  if (!Array.isArray(weeklyData)) return normalized;
-
-  weeklyData.forEach((item, index) => {
-    if (index < 7 && typeof item?.value === "number") {
-      normalized[index] = {
-        day: item.day || days[index],
-        value: item.value,
-      };
-    }
-  });
-
-  return normalized;
-};
-
-const calculateWeeklyData = (sessions) => {
-  const days = ["M", "T", "W", "T", "F", "S", "S"];
-  const weeklyData = days.map((day) => ({ day, value: 0 }));
-
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-  startOfWeek.setHours(0, 0, 0, 0);
-
-  sessions.forEach((session) => {
-    if (!session.timestamp) return;
-
-    const date =
-      typeof session.timestamp.toDate === "function"
-        ? session.timestamp.toDate()
-        : new Date(session.timestamp.seconds * 1000);
-
-    if (date >= startOfWeek) {
-      const index = (date.getDay() + 6) % 7;
-      weeklyData[index].value += (session.duration || 0) / 60;
-    }
-  });
-
-  return weeklyData;
-};
-
-const calculateStreakFromSessions = (sessions) => {
-  try {
-    if (!Array.isArray(sessions) || sessions.length === 0) return 0;
-
-    const toLocalDayKey = (date) => {
-      const d = new Date(date);
-      d.setHours(0, 0, 0, 0);
-      const y = d.getFullYear();
-      const m = d.getMonth() + 1;
-      const day = d.getDate();
-      return `${y}-${m}-${day}`;
-    };
-
-    const sessionDays = new Set();
-
-    sessions.forEach((s) => {
-      let sessionDate;
-      try {
-        if (s.timestamp && typeof s.timestamp.toDate === "function") {
-          sessionDate = s.timestamp.toDate();
-        } else if (s.timestamp && s.timestamp.seconds) {
-          sessionDate = new Date(s.timestamp.seconds * 1000);
-        } else if (s.timestamp instanceof Date) {
-          sessionDate = s.timestamp;
-        } else {
-          sessionDate = new Date(s.timestamp);
-        }
-      } catch {
-        sessionDate = null;
-      }
-      if (!sessionDate) return;
-      if (s.mode !== "focus" || s.status !== "completed") return;
-      sessionDays.add(toLocalDayKey(sessionDate));
-    });
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-
-    const hasToday = sessionDays.has(toLocalDayKey(today));
-    const hasYesterday = sessionDays.has(toLocalDayKey(yesterday));
-
-    if (!hasToday && !hasYesterday) return 0;
-
-    let current = hasToday ? new Date(today) : new Date(yesterday);
-    let streak = 0;
-    while (true) {
-      const key = toLocalDayKey(current);
-      if (!sessionDays.has(key)) break;
-      streak += 1;
-      current.setDate(current.getDate() - 1);
-    }
-    return streak;
-  } catch {
-    return 0;
-  }
-};
-
-const fetchTaskData = async (analyticsData) => {
-  try {
-    const q = query(
-      collection(database, "tasks"),
-      orderBy("createdAt", "desc")
-    );
-
-    const snapshot = await getDocs(q);
-    const tasks = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
-
-    analyticsData.totalTasks = tasks.length;
-    analyticsData.completedTasks = tasks.filter(
-      (t) => t.status === "Done" || t.completed === true
-    ).length;
-
-    if (!analyticsData.assignments.length) {
-      analyticsData.assignments = tasks.slice(0, 10).map((t) => ({
-        title: t.title || t.name || "Untitled Task",
-        completed: t.status === "Done" || t.completed === true,
-      }));
-    }
-
-    return analyticsData;
-  } catch {
-    return analyticsData;
-  }
 };
 
 export default useProgressAnalytics;

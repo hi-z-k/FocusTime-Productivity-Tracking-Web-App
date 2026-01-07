@@ -3,53 +3,50 @@ import {
   BarChart,
   Bar,
   XAxis,
+  YAxis, // Added this import
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
+  Tooltip, // Added for better UX
 } from "recharts";
-import { useTaskBoard } from "../../hooks/useTaskBoard"; // Real-time sync source
+import { useTaskBoard } from "../../hooks/useTaskBoard";
 import useProgressAnalytics from "../../hooks/useProgressAnalytics";
 import { getPetMood, getPetEvolution } from "../../services/gamificationLogic";
 import "../../styles/progress.css";
 
-const COLORS = ["#8884d8", "#e0e0e0"]; // Purple for Done, Grey for Remaining
+const COLORS = ["#8884d8", "#e0e0e0"];
 
 export default function ProgressChart() {
   const { tasks, editTask } = useTaskBoard();
   const { data, loading, error } = useProgressAnalytics();
 
   // --- LOGIC FOR REAL-TIME SYNC ---
-  // 1. General Tasks Circle Logic
-  const generalTasks = tasks.filter((t) => t.type === "task");
+  const generalTasks = tasks.filter((t) => t.type === "task" || t.type === "general");
   const completedCount = generalTasks.filter((t) => t.completed).length;
   const totalCount = generalTasks.length;
-  const percentage =
-    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const percentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   const taskPieData = [
     { value: completedCount },
     { value: totalCount - completedCount || (totalCount === 0 ? 1 : 0) },
   ];
 
-  // 2. Real Assignment List Logic
   const realAssignments = tasks.filter((t) => t.type === "assignment");
 
   const handleToggle = (id, currentStatus) => {
     editTask(id, { completed: !currentStatus });
   };
 
-  // --- ANALYTICS DATA (XP & PET) ---
-  if (loading || !data)
-    return <div className="loading-state">Loading dashboard...</div>;
+  if (loading || !data) return <div className="loading-state">Loading dashboard...</div>;
   if (error) return <div className="error-state">Error loading analytics</div>;
 
   const petBase = getPetEvolution(data.hoursSpent || 0);
   const petMood = getPetMood(data.streak || 0);
 
   const timeXPData = [
-    { value: (data.hoursSpent || 0) % 10 },
-    { value: 10 - ((data.hoursSpent || 0) % 10) },
+    { value: data.hoursSpent || 0 },
+    { value: Math.max(0, (data.dailyGoal || 4.0) - (data.hoursSpent || 0)) },
   ];
 
   return (
@@ -88,10 +85,7 @@ export default function ProgressChart() {
               <span className="pet-emoji">{petBase.emoji}</span>
             </div>
             <div className="pet-info">
-              <span
-                className="pet-mood-tag"
-                style={{ backgroundColor: petMood.color }}
-              >
+              <span className="pet-mood-tag" style={{ backgroundColor: petMood.color }}>
                 {petMood.mood}
               </span>
               <h4 className="pet-stage-name">{petBase.stage}</h4>
@@ -104,20 +98,15 @@ export default function ProgressChart() {
           <p className="card-label">Milestones</p>
           <div className="badge-row">
             {(data.achievements || []).map((ach) => (
-              <div
-                key={ach.id}
-                className={`badge-item ${ach.unlocked ? "" : "locked"}`}
-              >
-                <span className="badge-icon" title={ach.title}>
-                  {ach.icon}
-                </span>
+              <div key={ach.id} className={`badge-item ${ach.unlocked ? "" : "locked"}`}>
+                <span className="badge-icon" title={ach.title}>{ach.icon}</span>
               </div>
             ))}
           </div>
           <p className="streak-footer">Streak: {data.streak || 0} Days</p>
         </div>
 
-        {/* 4. PURPLE TASK CIRCLE (Synchronized) */}
+        {/* 4. TASK PROGRESS CIRCLE */}
         <div className="card task-completion">
           <p className="card-label">Task Progress</p>
           {totalCount > 0 ? (
@@ -139,9 +128,7 @@ export default function ProgressChart() {
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
-              <h3 style={{ color: "#8884d8", margin: "5px 0" }}>
-                {percentage}%
-              </h3>
+              <h3 style={{ color: "#8884d8", margin: "5px 0" }}>{percentage}%</h3>
               <p className="tiny-label">Tasks Done</p>
             </>
           ) : (
@@ -154,6 +141,15 @@ export default function ProgressChart() {
           <h3>Weekly Progress</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data.weeklyData || []}>
+              {/* FIXED YAXIS: Correct placement and dynamic domain */}
+              <YAxis 
+                hide={true} 
+                domain={[0, data?.dailyGoal || 4]} 
+              />
+              <Tooltip 
+                formatter={(value) => [`${value.toFixed(2)} hrs`, "Focus Time"]}
+                cursor={{ fill: 'transparent' }}
+              />
               <Bar
                 dataKey="value"
                 fill="#8884d8"
@@ -170,7 +166,7 @@ export default function ProgressChart() {
           </ResponsiveContainer>
         </div>
 
-        {/* 6. REAL ASSIGNMENT TRACKER (Synchronized) */}
+        {/* 6. ASSIGNMENT TRACKER */}
         <div className="card assignment-tracker">
           <h3>Assignments ({realAssignments.length})</h3>
           <div className="tracker-list">
@@ -181,16 +177,10 @@ export default function ProgressChart() {
                   className="tracker-item"
                   onClick={() => handleToggle(item.id, item.completed)}
                 >
-                  <div
-                    className={`checkbox-mock ${
-                      item.completed ? "checked" : ""
-                    }`}
-                  >
+                  <div className={`checkbox-mock ${item.completed ? "checked" : ""}`}>
                     {item.completed && "✓"}
                   </div>
-                  <span className={item.completed ? "strikethrough" : ""}>
-                    {item.title}
-                  </span>
+                  <span className={item.completed ? "strikethrough" : ""}>{item.title}</span>
                 </div>
               ))
             ) : (

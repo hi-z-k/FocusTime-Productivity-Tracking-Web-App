@@ -9,7 +9,17 @@ export const getPetMood = (streak) => {
 };
 
 export const getPetEvolution = (hours) => {
-  if (hours < 5) return { emoji: "🥚", stage: "Egg" };
-  if (hours < 20) return { emoji: "🐣", stage: "Hatchling" };
+  if (hours < 2) return { emoji: "🥚", stage: "Egg" };
+  if (hours < 4) return { emoji: "🐣", stage: "Hatchling" };
   return { emoji: "🦉", stage: "Scholar Owl" };
+};
+
+export const getMilestones = (streak) => {
+  return [
+    { id: 1, title: "Day One", icon: "🌅", unlocked: streak >= 1 },
+    { id: 2, title: "3 Day Heat", icon: "🔥", unlocked: streak >= 3 },
+    { id: 3, title: "Full Week", icon: "📅", unlocked: streak >= 7 },
+    { id: 4, title: "Unstoppable", icon: "⚡", unlocked: streak >= 10 },
+    { id: 5, title: "Legendary Streak", icon: "👑", unlocked: streak >= 14 },
+  ];
 };
