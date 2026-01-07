@@ -1,28 +1,31 @@
-import React, { useState, useEffect } from "react";
-import { usePersonalInfo } from "../../hooks/usePersonalInfo"; // Import your hook
-import useProgressAnalytics from "../../hooks/useProgressAnalytics";
+import React, { useState, useEffect, useRef } from "react";
+import { usePersonalInfo } from "../../hooks/usePersonalInfo";
+import { useProgressAnalytics } from "../../hooks/useProgressAnalytics";
+import { auth } from "../../services/firebase/firebaseConfig";
 
 import "../../styles/profile.css";
 
 const Profile = () => {
-  // 1. Initialize the hook
   const { personalInfo, loading, updateInfo } = usePersonalInfo();
   const { data } = useProgressAnalytics();
-  const streak = data?.streak || 0;
+  const fileInputRef = useRef(null);
 
-  // 2. Local state for the form inputs
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
     bestStudyTime: "Morning",
+    photoURL: ""
   });
 
-  // 3. Update local form when database data arrives
+  // Syncs the local form with the database whenever the database updates
   useEffect(() => {
-    if (personalInfo) {
-      setFormData(personalInfo);
+    if (personalInfo && Object.keys(personalInfo).length > 0) {
+      setFormData((prev) => ({
+        ...prev,
+        ...personalInfo
+      }));
     }
   }, [personalInfo]);
 
@@ -31,22 +34,43 @@ const Profile = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 800000) {
+      alert("Image is too large. Please select a photo under 800KB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result;
+
+      try {
+        setFormData((prev) => ({ ...prev, photoURL: base64String }));
+        // Saves the image string directly to Firestore
+        await updateInfo({ ...formData, photoURL: base64String });
+        alert("Avatar updated!");
+      } catch (error) {
+        console.error("Save Error:", error);
+        alert("Failed to save avatar.");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveChanges = async (e) => {
     e.preventDefault();
     try {
-      // 4. Call the backend via the hook
       await updateInfo(formData);
-
-      alert(
-        "Profile Updated! Your streak has increased and data saved to cloud."
-      );
+      alert("Profile Updated!");
     } catch (error) {
-      alert("Failed to save profile. Check console.");
+      alert("Failed to save profile.");
     }
   };
 
-  if (loading)
-    return <div className="dashboard-layout">Loading Profile...</div>;
+  if (loading) return <div className="dashboard-layout">Loading Profile...</div>;
 
   return (
     <div className="profile-container">
@@ -54,17 +78,35 @@ const Profile = () => {
         {/* Left Column: Avatar & Summary */}
         <aside className="profile-card">
           <div className="avatar-section">
-            <div className="avatar-circle">👤</div>
+            <div className="avatar-circle">
+              {formData.photoURL ? (
+                <img src={formData.photoURL} alt="Avatar" className="avatar-img" />
+              ) : (
+                "👤"
+              )}
+            </div>
+            {/* Dynamic Name and Handle */}
             <h3 style={{ margin: "10px 0 5px" }}>
-              {formData.firstName || "User Name"}
+              {formData.firstName || "User"} {formData.lastName || ""}
             </h3>
             <p style={{ color: "var(--text-muted)" }}>
-              {formData.email || "@user_handle"}
+              @{formData.email ? formData.email.split('@')[0] : (formData.firstName?.toLowerCase() || "user_handle")}
             </p>
           </div>
 
           <div className="side-list">
-            <button className="btn btn-primary" style={{ width: "100%" }}>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              style={{ display: "none" }} 
+              accept="image/*"
+              onChange={handleFileChange}
+            />
+            <button 
+              className="btn btn-primary" 
+              style={{ width: "100%" }}
+              onClick={() => fileInputRef.current.click()}
+            >
               Edit Avatar
             </button>
             <div className="streak-badge">
@@ -86,9 +128,8 @@ const Profile = () => {
                   type="text"
                   name="firstName"
                   className="profile-input"
-                  value={formData.firstName}
+                  value={formData?.firstName || ""}
                   onChange={handleInputChange}
-                  placeholder="First Name"
                 />
               </div>
               <div>
@@ -97,9 +138,8 @@ const Profile = () => {
                   type="text"
                   name="lastName"
                   className="profile-input"
-                  value={formData.lastName}
+                  value={formData?.lastName || ""}
                   onChange={handleInputChange}
-                  placeholder="Last Name"
                 />
               </div>
             </div>
@@ -110,7 +150,7 @@ const Profile = () => {
                 type="email"
                 name="email"
                 className="profile-input"
-                value={formData.email}
+                value={formData?.email || ""}
                 onChange={handleInputChange}
               />
             </div>
@@ -121,7 +161,7 @@ const Profile = () => {
                 type="tel"
                 name="phone"
                 className="profile-input"
-                value={formData.phone}
+                value={formData?.phone || ""}
                 onChange={handleInputChange}
               />
             </div>
@@ -131,7 +171,7 @@ const Profile = () => {
               <select
                 name="bestStudyTime"
                 className="profile-select"
-                value={formData.bestStudyTime}
+                value={formData?.bestStudyTime || "Morning"}
                 onChange={handleInputChange}
               >
                 <option value="Morning">Morning</option>
@@ -140,18 +180,13 @@ const Profile = () => {
               </select>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: "10px",
-                justifyContent: "flex-end",
-                marginTop: "30px",
-              }}
-            >
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "30px" }}>
+              {/* FIXED CANCEL BUTTON: Reverts to original database state */}
               <button
                 type="button"
                 className="btn"
                 style={{ border: "1px solid var(--border)" }}
+                onClick={() => setFormData(personalInfo)} 
               >
                 Cancel
               </button>
