@@ -3,7 +3,7 @@ import '../../styles/forms.css';
 import '../../styles/buttons.css';
 import { logIn, logInExternal } from '../../services/authService';
 import SocialBtn from '../../components/ui/SocialBtn';
-
+import messageOf from './errorMsg';
 
 const Login = ({ onNavigate }) => { // Added onNavigate prop
   const [email, setEmail] = useState('');
@@ -22,7 +22,7 @@ const Login = ({ onNavigate }) => { // Added onNavigate prop
     try {
       await logIn(email, password)
     } catch (err) {
-      setError(err.message);
+      setError(err);
     }
   };
 
@@ -31,7 +31,7 @@ const Login = ({ onNavigate }) => { // Added onNavigate prop
     try {
       await logInExternal(provider);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     }
   };
 
@@ -57,7 +57,7 @@ const Login = ({ onNavigate }) => { // Added onNavigate prop
           {error && (
             <div style={authStyles.errorBadge}>
               <span style={{ marginRight: '8px'}}></span>
-              {error}
+              {messageOf(error)}
             </div>
           )}
           <form onSubmit={handleLogin}>

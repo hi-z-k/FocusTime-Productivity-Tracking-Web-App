@@ -3,6 +3,7 @@ import '../../styles/forms.css';
 import '../../styles/buttons.css';
 import { signUp, logInExternal } from '../../services/authService';
 import SocialBtn from '../../components/ui/SocialBtn';
+import messageOf from './errorMsg';
 
 
 const Register = ({ onNavigate }) => {
@@ -22,7 +23,7 @@ const Register = ({ onNavigate }) => {
     try {
       await logInExternal(provider);
     } catch (err) {
-      setError(err.message);
+      setError(err);
     }
   };
 
@@ -39,7 +40,7 @@ const Register = ({ onNavigate }) => {
     try {
       await signUp(formData.email, formData.password)
     } catch (err) {
-      setError(err.message);
+      setError(err);
     }
   };
 
@@ -69,7 +70,7 @@ const Register = ({ onNavigate }) => {
           {error && (
             <div style={authStyles.errorBadge}>
               <span style={{ marginRight: '8px' }}></span>
-              {error}
+              {messageOf(error)}
             </div>
           )}
           <form onSubmit={handleRegister}>
