@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore"; // Changed from getFirestore
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
 
@@ -14,9 +14,13 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const database = getFirestore(app);
-const auth = getAuth(app);
 
+const database = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
+});
+
+const auth = getAuth(app);
 export const storage = getStorage(app);
 
 export { database, auth };
