@@ -1,6 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { getFocusedVideos } from "../../services/youtubeService";
 import "../../styles/youtube.css";
+
+// Debounce helper to prevent firing the API on every single keystroke
+const debounce = (func, delay) => {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => func(...args), delay);
+  };
+};
 
 export default function YouTubeFocus() {
   const [videos, setVideos] = useState([]);
@@ -9,19 +18,51 @@ export default function YouTubeFocus() {
   const [loading, setLoading] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null);
 
-  const handleSearch = async (query) => {
-    if (!query) return;
-    setLoading(true);
-    setIsDistraction(false);
+  // Ref to store the AbortController so we can cancel pending requests
+  const abortControllerRef = useRef(null);
 
-    const result = await getFocusedVideos(query);
-    setHasSearched(true);
-    setLoading(false);
+  // The core search logic wrapped in a debounce
+  const debouncedSearch = useCallback(
+    debounce(async (query) => {
+      // 1. If the input is empty, reset the state and don't call the API
+      if (!query.trim()) {
+        setVideos([]);
+        setHasSearched(false);
+        setLoading(false);
+        setIsDistraction(false);
+        return;
+      }
 
-    if (result.success) {
-      setVideos(result.data);
-      setIsDistraction(result.totalFound > 0 && result.data.length === 0);
-    }
+      // 2. Cancel any search request that is still in progress
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // 3. Create a new controller for the current request
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
+      setLoading(true);
+      setIsDistraction(false);
+
+      const result = await getFocusedVideos(query, controller.signal);
+
+      // 4. Only update state if the request wasn't cancelled
+      if (result) {
+        setHasSearched(true);
+        setLoading(false);
+
+        if (result.success) {
+          setVideos(result.data);
+          setIsDistraction(result.totalFound > 0 && result.data.length === 0);
+        }
+      }
+    }, 500), // 500ms delay is a good balance for API safety
+    []
+  );
+
+  const handleInputChange = (e) => {
+    debouncedSearch(e.target.value);
   };
 
   return (
@@ -36,6 +77,7 @@ export default function YouTubeFocus() {
               src={`https://www.youtube.com/embed/${selectedVideo.id.videoId}?rel=0&modestbranding=1&autoplay=1`}
               title="YouTube video player"
               frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
             ></iframe>
           </div>
@@ -55,9 +97,7 @@ export default function YouTubeFocus() {
               <input
                 type="text"
                 placeholder="Search tutorials, lectures, or topics... 🔎"
-                onKeyDown={(e) =>
-                  e.key === "Enter" && handleSearch(e.target.value)
-                }
+                onChange={handleInputChange}
               />
             </div>
           </div>
