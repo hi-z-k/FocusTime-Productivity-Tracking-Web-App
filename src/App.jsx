@@ -38,8 +38,14 @@ export default function App() {
     if (loading) return;
 
     if (user) {
-      if (currentView === "login" || currentView === "register") {
-        setCurrentView("home");
+      if (user.emailVerified) {
+        if (currentView === "login" || currentView === "register") {
+          setCurrentView("home");
+        }
+      } else {
+        if (currentView !== "register") {
+          setCurrentView("login");
+        }
       }
     } else {
       if (currentView !== "login" && currentView !== "register") {
@@ -49,7 +55,7 @@ export default function App() {
   }, [user, loading, currentView]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !user.emailVerified) return;
 
     const unsubscribe = listenToNotifications(user.uid, (data) => {
       if (data.length > 0 && prevNotifsRef.current.length > 0) {
@@ -67,7 +73,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, [user?.uid]);
+  }, [user?.uid, user?.emailVerified]);
 
   const handlePopupRead = () => {
     if (user && activeNote) {
@@ -78,7 +84,7 @@ export default function App() {
 
   if (loading) return null;
 
-  if (!user) {
+  if (!user || !user.emailVerified) {
     return (
       <div className="auth-wrapper" data-theme={theme}>
         {currentView === "register" ? (
@@ -92,7 +98,6 @@ export default function App() {
 
   return (
     <div className={`app-container ${theme}`} data-theme={theme} style={styles.appContainer}>
-      
       {showPopup && activeNote && (
         <div style={styles.popup}>
           <div style={styles.popupContent}>
@@ -143,63 +148,11 @@ export default function App() {
 }
 
 const styles = {
-  appContainer: {
-    display: "flex",
-    minHeight: "100vh",
-    position: "relative"
-  },
-  mainWrapper: {
-    flex: 1,
-    marginLeft: "240px",
-    transition: "margin 0.3s ease",
-    display: "flex",
-    flexDirection: "column"
-  },
-  popup: {
-    position: "fixed",
-    top: "85px",
-    right: "25px",
-    width: "300px",
-    backgroundColor: "#eff6ff",
-    padding: "12px",
-    borderRadius: "8px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-    zIndex: 9999,
-    display: "flex",
-    justifyContent: "space-between",
-    border: "1px solid #e5e7eb",
-    borderLeft: "4px solid #3b82f6"
-  },
-  popupContent: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-    flex: 1
-  },
-  popupText: {
-    fontSize: "0.85rem",
-    color: "#1e293b",
-    fontWeight: "500",
-    lineHeight: "1.4"
-  },
-  inlineReadBtn: {
-    alignSelf: "flex-start",
-    padding: "4px 8px",
-    borderRadius: "4px",
-    fontSize: "0.7rem",
-    fontWeight: "600",
-    cursor: "pointer",
-    border: "none",
-    backgroundColor: "#3b82f6",
-    color: "white"
-  },
-  closeBtn: {
-    background: "none",
-    border: "none",
-    color: "#94a3b8",
-    fontSize: "18px",
-    cursor: "pointer",
-    padding: "0 0 0 10px",
-    alignSelf: "flex-start"
-  }
+  appContainer: { display: "flex", minHeight: "100vh", position: "relative" },
+  mainWrapper: { flex: 1, marginLeft: "240px", transition: "margin 0.3s ease", display: "flex", flexDirection: "column" },
+  popup: { position: "fixed", top: "85px", right: "25px", width: "300px", backgroundColor: "#eff6ff", padding: "12px", borderRadius: "8px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 9999, display: "flex", justifyContent: "space-between", border: "1px solid #e5e7eb", borderLeft: "4px solid #3b82f6" },
+  popupContent: { display: "flex", flexDirection: "column", gap: "8px", flex: 1 },
+  popupText: { fontSize: "0.85rem", color: "#1e293b", fontWeight: "500", lineHeight: "1.4" },
+  inlineReadBtn: { alignSelf: "flex-start", padding: "4px 8px", borderRadius: "4px", fontSize: "0.7rem", fontWeight: "600", cursor: "pointer", border: "none", backgroundColor: "#3b82f6", color: "white" },
+  closeBtn: { background: "none", border: "none", color: "#94a3b8", fontSize: "18px", cursor: "pointer", padding: "0 0 0 10px", alignSelf: "flex-start" }
 };

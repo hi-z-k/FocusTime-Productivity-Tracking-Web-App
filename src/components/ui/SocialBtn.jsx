@@ -17,14 +17,6 @@ const SocialBtn = ({ onSocialLogin, title = "Sign in with" }) => {
         <button 
           className="btn" 
           style={socialStyles.socialBtn} 
-          onClick={onSocialLogin('apple')}
-        >
-          Apple ID
-        </button>
-        
-        <button 
-          className="btn" 
-          style={socialStyles.socialBtn} 
           onClick={onSocialLogin('facebook')}
         >
           Facebook
