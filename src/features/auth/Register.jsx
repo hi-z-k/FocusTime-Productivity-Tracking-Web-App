@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../../styles/forms.css';
 import '../../styles/buttons.css';
 import { signUp, logInExternal } from '../../services/authService';
 import SocialBtn from '../../components/ui/SocialBtn';
 import messageOf from './errorMsg';
-
 
 const Register = ({ onNavigate }) => {
   const [formData, setFormData] = useState({
@@ -13,6 +12,17 @@ const Register = ({ onNavigate }) => {
     confirmPassword: ''
   });
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError(null);
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (error) setError(null);
@@ -26,7 +36,6 @@ const Register = ({ onNavigate }) => {
       setError(err);
     }
   };
-
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -44,13 +53,8 @@ const Register = ({ onNavigate }) => {
     }
   };
 
-
-
-
-
   return (
     <div style={authStyles.container}>
-      {/* Left Panel */}
       <div style={authStyles.imagePanel}>
         <div style={authStyles.placeholderContent}>
           <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Join Us</h1>
@@ -60,19 +64,20 @@ const Register = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Right Panel */}
       <div style={authStyles.formPanel}>
         <div style={authStyles.formWrapper}>
           <h2 style={{ marginBottom: '0.5rem', fontSize: '2rem' }}>Register</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
             Create an account to continue
           </p>
+          
           {error && (
             <div style={authStyles.errorBadge}>
               <span style={{ marginRight: '8px' }}></span>
               {messageOf(error)}
             </div>
           )}
+
           <form onSubmit={handleRegister}>
             <div style={{ marginBottom: '1rem' }}>
               <label style={authStyles.label}>Email</label>
@@ -118,7 +123,6 @@ const Register = ({ onNavigate }) => {
             </button>
           </form>
 
-
           <SocialBtn onSocialLogin={handleExternalLogin} mode="in" />
 
           <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem' }}>
@@ -146,7 +150,6 @@ const authStyles = {
   imagePanel: {
     flex: 1,
     backgroundColor: '#3b82f6',
-    // One clean display property
     display: window.innerWidth < 768 ? 'none' : 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -174,21 +177,6 @@ const authStyles = {
     fontSize: '0.9rem',
     fontWeight: '500',
     color: '#333',
-  },
-  divider: {
-    textAlign: 'center',
-    margin: '20px 0',
-    color: '#666',
-    fontSize: '0.85rem',
-  },
-  socialButtons: {
-    display: 'flex',
-    gap: '10px',
-  },
-  socialBtn: {
-    flex: 1,
-    border: '1px solid #ddd',
-    background: 'white',
   },
   errorBadge: {
     display: 'flex',

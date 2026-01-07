@@ -43,11 +43,14 @@ const FIREBASE_ERRORS = {
   'auth/missing-ios-bundle-id': "Missing iOS Bundle ID.",
   'auth/missing-android-pkg-name': "Missing Android Package Name.",
   'auth/invalid-continue-uri': "The continue URL provided is invalid.",
-  'auth/missing-continue-uri': "A continue URL must be provided."
+  'auth/missing-continue-uri': "A continue URL must be provided.",
+  'auth/passwords-do-not-match': "Passwords do not match. Please try again.",
+  'auth/missing-email': "Please enter your email address first."
 };
 
 const messageOf = (error) => {
-  if (!error.code) return "An unexpected error occurred. Please try again.";
+  if (!error) return "";
+  if (typeof error === 'string') return error;
   return FIREBASE_ERRORS[error.code] || "An unexpected error occurred. Please try again.";
 };
 
