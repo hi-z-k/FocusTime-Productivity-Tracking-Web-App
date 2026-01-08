@@ -8,7 +8,6 @@ export const usePersonalInfo = () => {
   const [personalInfo, setPersonalInfo] = useState({
     firstName: "",
     lastName: "",
-    email: "",
     phone: "",
     bestStudyTime: "Morning"
   });

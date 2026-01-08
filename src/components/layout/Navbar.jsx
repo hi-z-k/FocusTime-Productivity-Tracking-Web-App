@@ -1,13 +1,13 @@
 import React from "react";
 import "../../styles/navbar.css";
 import useProgressAnalytics from "../../hooks/useProgressAnalytics";
-import { usePersonalInfo } from "../../hooks/usePersonalInfo"; // Added hook import
+import { usePersonalInfo } from "../../hooks/usePersonalInfo";
 
-const Navbar = ({ title = "To-Do" }) => {
-  const { data } = useProgressAnalytics();
-  const { personalInfo } = usePersonalInfo(); // 1. Initialize the hook
+const Navbar = ({ title = "Dashboard", onNotificationClick, onProfileClick }) => {
+  const { data, loading } = useProgressAnalytics();
+  const { personalInfo } = usePersonalInfo();
   
-  const streak = data?.streak || 0;
+  const streak = !loading && data ? data.streak : 0;
 
   return (
     <header className="top-navbar">
@@ -15,24 +15,33 @@ const Navbar = ({ title = "To-Do" }) => {
         <h2 className="page-title">{title}</h2>
 
         <div className="navbar-actions">
-          <button className="icon-btn-small">🔔</button>
-          <div className="user-profile-badge">
+          <button 
+            className="icon-btn-small" 
+            onClick={onNotificationClick}
+            style={{ cursor: "pointer" }}
+          >
+            🔔
+          </button>
+          
+          <div 
+            className="user-profile-badge" 
+            onClick={onProfileClick}
+            style={{ cursor: "pointer" }}
+          >
             <div className="user-text">
-              {/* 2. Display Dynamic Name */}
               <span className="user-name">
-                {personalInfo?.firstName || "User Name"}
+                {personalInfo?.firstName || "User"}
               </span>
               <span className="user-streak">
-                🔥 {streak} Days Streak
+                {loading ? "..." : `🔥 ${streak} Days`}
               </span>
             </div>
             
-            {/* 3. Display Dynamic Avatar */}
             <div className="user-avatar">
               {personalInfo?.photoURL ? (
                 <img 
                   src={personalInfo.photoURL} 
-                  alt="Avatar" 
+                  alt="User" 
                   className="navbar-avatar-img" 
                 />
               ) : (

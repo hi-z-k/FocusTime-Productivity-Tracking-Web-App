@@ -1,31 +1,29 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { usePersonalInfo } from "../../hooks/usePersonalInfo";
 import { useProgressAnalytics } from "../../hooks/useProgressAnalytics";
-import { auth } from "../../services/firebase/firebaseConfig";
-
 import "../../styles/profile.css";
+import "../../styles/buttons.css";
 
 const Profile = () => {
-  const { personalInfo, loading, updateInfo } = usePersonalInfo();
-  const { data } = useProgressAnalytics();
-  const fileInputRef = useRef(null);
+  const { personalInfo, loading: infoLoading, updateInfo } = usePersonalInfo();
+  const { data, loading: analyticsLoading } = useProgressAnalytics();
 
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    email: "",
     phone: "",
     bestStudyTime: "Morning",
-    photoURL: ""
   });
 
-  // Syncs the local form with the database whenever the database updates
+  // Load data into form, excluding email to keep it read-only
   useEffect(() => {
-    if (personalInfo && Object.keys(personalInfo).length > 0) {
-      setFormData((prev) => ({
-        ...prev,
-        ...personalInfo
-      }));
+    if (personalInfo) {
+      setFormData({
+        firstName: personalInfo.firstName || "",
+        lastName: personalInfo.lastName || "",
+        phone: personalInfo.phone || "",
+        bestStudyTime: personalInfo.bestStudyTime || "Morning",
+      });
     }
   }, [personalInfo]);
 
@@ -34,79 +32,38 @@ const Profile = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 800000) {
-      alert("Image is too large. Please select a photo under 800KB.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64String = reader.result;
-
-      try {
-        setFormData((prev) => ({ ...prev, photoURL: base64String }));
-        // Saves the image string directly to Firestore
-        await updateInfo({ ...formData, photoURL: base64String });
-        alert("Avatar updated!");
-      } catch (error) {
-        console.error("Save Error:", error);
-        alert("Failed to save avatar.");
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleSaveChanges = async (e) => {
     e.preventDefault();
     try {
       await updateInfo(formData);
-      alert("Profile Updated!");
+      alert("Profile updated successfully!");
     } catch (error) {
-      alert("Failed to save profile.");
+      alert("Failed to save profile changes.");
     }
   };
 
-  if (loading) return <div className="dashboard-layout">Loading Profile...</div>;
+  if (infoLoading || analyticsLoading) {
+    return <div className="dashboard-layout">Loading Profile...</div>;
+  }
 
   return (
     <div className="profile-container">
       <div className="profile-grid">
-        {/* Left Column: Avatar & Summary */}
+        {/* Left Column: Original Avatar & Summary Style */}
         <aside className="profile-card">
           <div className="avatar-section">
-            <div className="avatar-circle">
-              {formData.photoURL ? (
-                <img src={formData.photoURL} alt="Avatar" className="avatar-img" />
-              ) : (
-                "👤"
-              )}
-            </div>
-            {/* Dynamic Name and Handle */}
+            <div className="avatar-circle">👤</div>
             <h3 style={{ margin: "10px 0 5px" }}>
-              {formData.firstName || "User"} {formData.lastName || ""}
+              {personalInfo?.firstName} {personalInfo?.lastName || "User"}
             </h3>
-            <p style={{ color: "var(--text-muted)" }}>
-              @{formData.email ? formData.email.split('@')[0] : (formData.firstName?.toLowerCase() || "user_handle")}
+            {/* Display email as static text only */}
+            <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+              {personalInfo?.email}
             </p>
           </div>
 
           <div className="side-list">
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              style={{ display: "none" }} 
-              accept="image/*"
-              onChange={handleFileChange}
-            />
-            <button 
-              className="btn btn-primary" 
-              style={{ width: "100%" }}
-              onClick={() => fileInputRef.current.click()}
-            >
+            <button className="btn btn-primary" style={{ width: "100%" }}>
               Edit Avatar
             </button>
             <div className="streak-badge">
@@ -116,7 +73,7 @@ const Profile = () => {
           </div>
         </aside>
 
-        {/* Right Column: Edit Form */}
+        {/* Right Column: Original Form Style (No Email Input) */}
         <main className="profile-card">
           <h3 style={{ marginBottom: "25px" }}>Personal Information</h3>
 
@@ -128,8 +85,9 @@ const Profile = () => {
                   type="text"
                   name="firstName"
                   className="profile-input"
-                  value={formData?.firstName || ""}
+                  value={formData.firstName}
                   onChange={handleInputChange}
+                  placeholder="First Name"
                 />
               </div>
               <div>
@@ -138,21 +96,11 @@ const Profile = () => {
                   type="text"
                   name="lastName"
                   className="profile-input"
-                  value={formData?.lastName || ""}
+                  value={formData.lastName}
                   onChange={handleInputChange}
+                  placeholder="Last Name"
                 />
               </div>
-            </div>
-
-            <div className="profile-form-group">
-              <label className="profile-label">Email Address</label>
-              <input
-                type="email"
-                name="email"
-                className="profile-input"
-                value={formData?.email || ""}
-                onChange={handleInputChange}
-              />
             </div>
 
             <div className="profile-form-group">
@@ -161,8 +109,9 @@ const Profile = () => {
                 type="tel"
                 name="phone"
                 className="profile-input"
-                value={formData?.phone || ""}
+                value={formData.phone}
                 onChange={handleInputChange}
+                placeholder="Not set"
               />
             </div>
 
@@ -171,7 +120,7 @@ const Profile = () => {
               <select
                 name="bestStudyTime"
                 className="profile-select"
-                value={formData?.bestStudyTime || "Morning"}
+                value={formData.bestStudyTime}
                 onChange={handleInputChange}
               >
                 <option value="Morning">Morning</option>
@@ -180,13 +129,19 @@ const Profile = () => {
               </select>
             </div>
 
-            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "30px" }}>
-              {/* FIXED CANCEL BUTTON: Reverts to original database state */}
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                justifyContent: "flex-end",
+                marginTop: "30px",
+              }}
+            >
               <button
                 type="button"
                 className="btn"
                 style={{ border: "1px solid var(--border)" }}
-                onClick={() => setFormData(personalInfo)} 
+                onClick={() => window.location.reload()}
               >
                 Cancel
               </button>
